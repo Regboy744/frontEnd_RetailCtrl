@@ -1,10 +1,18 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue"],
+  "include": [
+    "env.d.ts",
+    "src/**/*",
+    "src/**/*.vue",
+    "typed-router.d.ts",
+    "src/types/database.types.ts"
+  ],
   "exclude": ["src/**/__tests__/*"],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-
+    "moduleResolution": "Bundler",
+    "types": ["unplugin-vue-router/client"],
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
