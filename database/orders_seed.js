@@ -1,9 +1,9 @@
 import { supabase, faker } from './util/config.js'
 
-const seedOrders = async (numRegularOrders, numBaselineOrders) => {
+const seedOrders = async (numOrders) => {
  const { data: locations, error: locationError } = await supabase
   .from('locations')
-  .select('id, company_id')
+  .select('id')
 
  if (locationError) {
   console.error('Error fetching locations:', locationError)
@@ -12,21 +12,6 @@ const seedOrders = async (numRegularOrders, numBaselineOrders) => {
  if (!locations || locations.length === 0) {
   throw new Error('No locations found in DB. Seed locations first.')
  }
-
- const { data: suppliers, error: supplierError } = await supabase
-  .from('suppliers')
-  .select('id, is_internal, company_id')
-
- if (supplierError) {
-  console.error('Error fetching suppliers:', supplierError)
-  throw supplierError
- }
- if (!suppliers || suppliers.length === 0) {
-  throw new Error('No suppliers found in DB. Seed suppliers first.')
- }
-
- const externalSuppliers = suppliers.filter((s) => !s.is_internal)
- const internalSuppliers = suppliers.filter((s) => s.is_internal)
 
  const { data: userProfiles, error: userError } = await supabase
   .from('user_profiles')
@@ -42,9 +27,8 @@ const seedOrders = async (numRegularOrders, numBaselineOrders) => {
 
  const orders = []
 
- for (let i = 0; i < numRegularOrders; i++) {
+ for (let i = 0; i < numOrders; i++) {
   const location = faker.helpers.arrayElement(locations)
-  const supplier = faker.helpers.arrayElement(externalSuppliers)
   const createdBy = faker.helpers.arrayElement(userProfiles)
 
   const orderDate = faker.date.between({
@@ -81,52 +65,9 @@ const seedOrders = async (numRegularOrders, numBaselineOrders) => {
    location_id: location.id,
    created_by: createdBy.id,
    order_date: orderDate.toISOString().split('T')[0],
-   supplier_id: supplier.id,
    total_amount: parseFloat(totalAmount.toFixed(2)),
    status: status,
    notes: notes,
-   is_baseline_order: false,
-   baseline_upload_date: null,
-   baseline_file_reference: null,
-  })
- }
-
- for (let i = 0; i < numBaselineOrders; i++) {
-  const location = faker.helpers.arrayElement(locations)
-  const internalSupplier = internalSuppliers.find(
-   (s) => s.company_id === location.company_id,
-  )
-
-  if (!internalSupplier) {
-   continue
-  }
-
-  const createdBy = faker.helpers.arrayElement(userProfiles)
-
-  const uploadDate = faker.date.between({
-   from: new Date(Date.now() - 3 * 30 * 24 * 60 * 60 * 1000),
-   to: new Date(),
-  })
-
-  const totalAmount = faker.number.float({
-   min: 500,
-   max: 15000,
-   precision: 0.01,
-  })
-
-  const fileRef = `baseline_${uploadDate.toISOString().split('T')[0]}_${faker.string.alphanumeric(6)}.csv`
-
-  orders.push({
-   location_id: location.id,
-   created_by: createdBy.id,
-   order_date: uploadDate.toISOString().split('T')[0],
-   supplier_id: internalSupplier.id,
-   total_amount: parseFloat(totalAmount.toFixed(2)),
-   status: 'delivered',
-   notes: 'Internal baseline order for price comparison',
-   is_baseline_order: true,
-   baseline_upload_date: uploadDate.toISOString(),
-   baseline_file_reference: fileRef,
   })
  }
 
@@ -137,17 +78,25 @@ const seedOrders = async (numRegularOrders, numBaselineOrders) => {
   throw error
  }
 
- const regularCount = orders.filter((o) => !o.is_baseline_order).length
- const baselineCount = orders.filter((o) => o.is_baseline_order).length
+ const statusCounts = orders.reduce((acc, order) => {
+  acc[order.status] = (acc[order.status] || 0) + 1
+  return acc
+ }, {})
+
  const totalValue = orders.reduce((sum, order) => sum + order.total_amount, 0)
 
  console.log('Successfully inserted orders:', data?.length || orders.length)
- console.log(`- Regular orders: ${regularCount}`)
- console.log(`- Baseline orders: ${baselineCount}`)
+ console.log(
+  `- Status breakdown: ${Object.entries(statusCounts)
+   .map(([status, count]) => `${status}=${count}`)
+   .join(', ')}`,
+ )
  console.log(`- Total Order Value: €${totalValue.toFixed(2)}`)
  console.log(
-  `- Average Order Value: €${(totalValue / orders.length).toFixed(2)}`,
+  `- Average Order Value: €${(totalValue / Math.max(1, orders.length)).toFixed(
+   2,
+  )}`,
  )
 }
 
-await seedOrders(180, 20)
+await seedOrders(200)

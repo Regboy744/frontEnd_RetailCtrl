@@ -15,7 +15,7 @@ const supplierCounts = [
 const seedSupplierProducts = async () => {
  const { data: suppliers, error: supplierError } = await supabase
   .from('suppliers')
-  .select('id, is_internal, company_id')
+  .select('id, is_active')
 
  if (supplierError) {
   console.error('Error fetching suppliers:', supplierError)
@@ -25,18 +25,17 @@ const seedSupplierProducts = async () => {
   throw new Error('No suppliers found in DB. Seed suppliers first.')
  }
 
- const externalSuppliers = suppliers.filter((s) => !s.is_internal)
- const internalSuppliers = suppliers.filter((s) => s.is_internal)
+ const activeSuppliers = suppliers.filter((s) => s.is_active)
 
- if (externalSuppliers.length < 3) {
+ if (activeSuppliers.length < 3) {
   throw new Error(
-   'At least 3 external suppliers are required to create alternative pricing options.',
+   'At least 3 active suppliers are required to create alternative pricing options.',
   )
  }
 
  const { data: masterProducts, error: masterError } = await supabase
   .from('master_products')
-  .select('id, article_code')
+  .select('id')
 
  if (masterError) {
   console.error('Error fetching master products:', masterError)
@@ -46,15 +45,15 @@ const seedSupplierProducts = async () => {
   throw new Error('No master products found in DB. Seed master_products first.')
  }
 
- const externalSupplierIds = externalSuppliers.map((s) => s.id)
+ const activeSupplierIds = activeSuppliers.map((s) => s.id)
  const supplierProducts = []
  const productSupplierCounts = []
 
  for (const masterProduct of masterProducts) {
   const desiredCount = faker.helpers.weightedArrayElement(supplierCounts)
-  const actualCount = Math.min(desiredCount, externalSupplierIds.length)
-  const chosenExternalSuppliers = faker.helpers
-   .shuffle([...externalSupplierIds])
+  const actualCount = Math.min(desiredCount, activeSupplierIds.length)
+  const chosenSuppliers = faker.helpers
+   .shuffle([...activeSupplierIds])
    .slice(0, actualCount)
 
   const basePrice = faker.number.float({
@@ -63,7 +62,7 @@ const seedSupplierProducts = async () => {
    precision: 0.01,
   })
 
-  chosenExternalSuppliers.forEach((supplierId, index) => {
+  chosenSuppliers.forEach((supplierId, index) => {
    const variance = faker.number.float({
     min: 0.88,
     max: 1.18,
@@ -85,31 +84,8 @@ const seedSupplierProducts = async () => {
      index === 0
       ? 'available'
       : faker.helpers.weightedArrayElement(statusWeights),
-    is_baseline: false,
    })
   })
-
-  for (const internalSupplier of internalSuppliers) {
-   if (faker.datatype.boolean({ probability: 0.7 })) {
-    const baselineVariance = faker.number.float({
-     min: 0.92,
-     max: 1.15,
-     precision: 0.0001,
-    })
-
-    const baselinePrice = parseFloat((basePrice * baselineVariance).toFixed(2))
-
-    supplierProducts.push({
-     supplier_id: internalSupplier.id,
-     master_product_id: masterProduct.id,
-     supplier_product_code: masterProduct.article_code,
-     current_price: baselinePrice,
-     vat_rate: faker.helpers.arrayElement([0.0, 0.09, 0.135, 0.23]),
-     availability_status: 'available',
-     is_baseline: true,
-    })
-   }
-  }
 
   productSupplierCounts.push(actualCount)
  }
@@ -124,23 +100,22 @@ const seedSupplierProducts = async () => {
  }
 
  const totalInserted = data?.length || supplierProducts.length
- const externalCount = supplierProducts.filter((sp) => !sp.is_baseline).length
- const baselineCount = supplierProducts.filter((sp) => sp.is_baseline).length
+ const availableCount = supplierProducts.filter(
+  (sp) => sp.availability_status === 'available',
+ ).length
  const averageSuppliers = (
-  externalCount / Math.max(1, masterProducts.length)
+  supplierProducts.length / Math.max(1, masterProducts.length)
  ).toFixed(2)
  const minSuppliers = Math.min(...productSupplierCounts)
  const maxSuppliers = Math.max(...productSupplierCounts)
 
  console.log('Successfully inserted supplier products:', totalInserted)
- console.log(`- External supplier products: ${externalCount}`)
- console.log(`- Internal baseline products: ${baselineCount}`)
+ console.log(`- Products marked available: ${availableCount}`)
  console.log(`- Master products covered: ${masterProducts.length}`)
- console.log(`- Avg external suppliers per product: ${averageSuppliers}`)
- console.log(`- Min external suppliers per product: ${minSuppliers}`)
- console.log(`- Max external suppliers per product: ${maxSuppliers}`)
- console.log('- External pricing varies ±12% around base')
- console.log('- Baseline pricing varies ±8-15% around base')
+ console.log(`- Avg suppliers per product: ${averageSuppliers}`)
+ console.log(`- Min suppliers per product: ${minSuppliers}`)
+ console.log(`- Max suppliers per product: ${maxSuppliers}`)
+ console.log('- Pricing varies ±12% around base')
 }
 
 await seedSupplierProducts()

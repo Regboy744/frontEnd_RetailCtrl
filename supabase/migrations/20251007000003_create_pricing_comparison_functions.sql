@@ -54,7 +54,7 @@ RETURNS TABLE (
     description TEXT,
     supplier_id UUID,
     supplier_name TEXT,
-    is_internal BOOLEAN,
+    is_active BOOLEAN,
     final_price NUMERIC,
     catalog_price NUMERIC,
     is_special_price BOOLEAN,
@@ -70,7 +70,7 @@ BEGIN
         mp.description,
         s.id,
         s.name,
-        s.is_internal,
+        s.is_active,
         COALESCE(scp.negotiated_price, sp.current_price) as final_price,
         sp.current_price as catalog_price,
         (scp.negotiated_price IS NOT NULL) as is_special_price,
@@ -90,7 +90,7 @@ BEGIN
         AND (p_supplier_ids IS NULL OR s.id = ANY(p_supplier_ids))
         AND (p_product_ids IS NULL OR mp.id = ANY(p_product_ids))
         AND (p_include_unavailable OR sp.availability_status = 'available')
-    ORDER BY mp.article_code, s.is_internal DESC, s.name
+    ORDER BY mp.article_code, s.name
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql STABLE;
@@ -134,12 +134,12 @@ BEGIN
                 'final_price', COALESCE(scp.negotiated_price, sp.current_price),
                 'catalog_price', sp.current_price,
                 'is_special', (scp.negotiated_price IS NOT NULL),
-                'is_internal', s.is_internal,
+                'is_active', s.is_active,
                 'availability', sp.availability_status,
                 'valid_until', scp.valid_until,
                 'notes', scp.notes
             )
-            ORDER BY s.is_internal DESC, s.name
+            ORDER BY s.name
         ) as prices,
         bool_or(scp.negotiated_price IS NOT NULL) as has_special_prices
     FROM master_products mp

@@ -150,20 +150,8 @@ const data = {
    icon: Settings2,
    items: [
     {
-     title: 'General',
-     to: '#',
-    },
-    {
-     title: 'Team',
-     to: '#',
-    },
-    {
-     title: 'Billing',
-     to: '#',
-    },
-    {
-     title: 'Limits',
-     to: '#',
+     title: 'User Profile',
+     to: '/app/users',
     },
    ],
   },

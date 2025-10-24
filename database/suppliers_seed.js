@@ -1,22 +1,9 @@
 import { supabase, faker } from './util/config.js'
 
-const seedSuppliers = async (numExternalSuppliers) => {
- const { data: companies, error: companiesError } = await supabase
-  .from('companies')
-  .select('id, name')
-
- if (companiesError) {
-  console.error('Error fetching companies:', companiesError)
-  throw companiesError
- }
-
- if (!companies || companies.length === 0) {
-  throw new Error('No companies found in DB. Seed companies first.')
- }
-
+const seedSuppliers = async (numSuppliers) => {
  const suppliers = []
 
- for (let index = 0; index < numExternalSuppliers; index++) {
+ for (let index = 0; index < numSuppliers; index++) {
   suppliers.push({
    name: faker.company.name(),
    contact_info: {
@@ -24,21 +11,7 @@ const seedSuppliers = async (numExternalSuppliers) => {
     email: faker.internet.email(),
     phone: `+353 ${faker.helpers.arrayElement(['1', '21', '61', '91'])} ${faker.string.numeric(3)} ${faker.string.numeric(4)}`,
    },
-   is_internal: false,
-   company_id: null,
-  })
- }
-
- for (const company of companies) {
-  suppliers.push({
-   name: `Internal - ${company.name}`,
-   contact_info: {
-    name: 'Internal Procurement',
-    email: `procurement@${company.name.toLowerCase().replace(/\s+/g, '')}.com`,
-    phone: '+353 1 800 0000',
-   },
-   is_internal: true,
-   company_id: company.id,
+   is_active: faker.datatype.boolean({ probability: 0.9 }),
   })
  }
 
@@ -49,15 +22,15 @@ const seedSuppliers = async (numExternalSuppliers) => {
   throw error
  }
 
- const externalCount = suppliers.filter((s) => !s.is_internal).length
- const internalCount = suppliers.filter((s) => s.is_internal).length
+ const activeCount = suppliers.filter((s) => s.is_active).length
+ const inactiveCount = suppliers.length - activeCount
 
  console.log(
   'Successfully inserted suppliers:',
   data?.length || suppliers.length,
  )
- console.log(`- External suppliers: ${externalCount}`)
- console.log(`- Internal suppliers (one per company): ${internalCount}`)
+ console.log(`- Active suppliers: ${activeCount}`)
+ console.log(`- Inactive suppliers: ${inactiveCount}`)
 }
 
-await seedSuppliers(5)
+await seedSuppliers(12)

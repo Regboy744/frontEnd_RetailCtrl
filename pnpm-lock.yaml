@@ -100,8 +100,8 @@ importers:
         specifier: 3.6.2
         version: 3.6.2
       supabase:
-        specifier: ^2.48.3
-        version: 2.48.3
+        specifier: ^2.53.6
+        version: 2.53.6
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -2220,8 +2220,8 @@ packages:
   strip-literal@3.0.0:
     resolution: {integrity: sha512-TcccoMhJOM3OebGhSBEmp3UZ2SfDMZUEBdRA/9ynfLi8yYajyWX3JiXArcJt4Umh4vISpspkQIY8ZZoCqjbviA==}
 
-  supabase@2.48.3:
-    resolution: {integrity: sha512-92vjrWqRUQPX9eYgTYlSSVXfpjzsAa++IX7IEM99BoYvNS3Pl6VrsqGN06QWi4VaX7FlPjjHLp+aIjoeWXcBug==}
+  supabase@2.53.6:
+    resolution: {integrity: sha512-tvMSykcxBaFm2SAKx93h6h4HjfJnWZV0kxO2P3i491Mtnu/95knLjSxr5gu7/tAJtPFuEMG/0m1kNGOHPSE6YA==}
     engines: {npm: '>=8'}
     hasBin: true
 
@@ -4725,7 +4725,7 @@ snapshots:
     dependencies:
       js-tokens: 9.0.1
 
-  supabase@2.48.3:
+  supabase@2.53.6:
     dependencies:
       bin-links: 5.0.0
       https-proxy-agent: 7.0.6

@@ -6,9 +6,8 @@
 -- UNIQUE INDEXES (Constraints)
 -- ============================================
 
--- Suppliers: external suppliers have unique names, internal suppliers are unique per company
-CREATE UNIQUE INDEX suppliers_external_name_unique ON suppliers(name) WHERE is_internal = false;
-CREATE UNIQUE INDEX suppliers_internal_company_unique ON suppliers(company_id) WHERE is_internal = true;
+-- Suppliers: all suppliers have unique names
+CREATE UNIQUE INDEX suppliers_name_unique ON suppliers(name);
 
 -- ============================================
 -- BASIC INDEXES
@@ -20,15 +19,13 @@ CREATE INDEX idx_master_products_article ON master_products(article_code);
 CREATE INDEX idx_master_products_description ON master_products USING GIN(to_tsvector('english', description));
 
 -- Supplier indexes
-CREATE INDEX idx_suppliers_company_id ON suppliers(company_id) WHERE company_id IS NOT NULL;
-CREATE INDEX idx_suppliers_internal ON suppliers(is_internal);
+CREATE INDEX idx_suppliers_active ON suppliers(is_active) WHERE is_active = true;
 
 -- Supplier Products indexes  
 CREATE INDEX idx_supplier_products_master ON supplier_products(master_product_id);
 CREATE INDEX idx_supplier_products_supplier ON supplier_products(supplier_id);
 CREATE INDEX idx_supplier_products_price ON supplier_products(current_price);
 CREATE INDEX idx_supplier_products_updated ON supplier_products(last_updated);
-CREATE INDEX idx_supplier_products_baseline ON supplier_products(is_baseline) WHERE is_baseline = true;
 
 -- Supplier Price History indexes
 CREATE INDEX idx_supplier_price_history_temporal ON supplier_price_history(supplier_product_id, effective_from DESC);
@@ -53,22 +50,18 @@ CREATE INDEX idx_invoices_invoice_number ON invoices(invoice_number);
 -- Time-based indexes
 CREATE INDEX idx_invoices_date ON invoices(invoice_date);
 CREATE INDEX idx_orders_date ON orders(order_date);
-CREATE INDEX idx_orders_baseline ON orders(is_baseline_order) WHERE is_baseline_order = true;
-CREATE INDEX idx_orders_baseline_upload_date ON orders(baseline_upload_date) WHERE baseline_upload_date IS NOT NULL;
 
 -- Relationship indexes
 CREATE INDEX idx_invoice_items_invoice ON invoice_line_items(invoice_id);
 CREATE INDEX idx_invoice_items_product ON invoice_line_items(master_product_id);
 CREATE INDEX idx_order_items_order ON order_items(order_id);
 CREATE INDEX idx_order_items_product ON order_items(master_product_id);
-CREATE INDEX idx_order_items_baseline_supplier ON order_items(baseline_supplier_id) WHERE baseline_supplier_id IS NOT NULL;
+CREATE INDEX idx_order_items_baseline_price ON order_items(baseline_unit_price) WHERE baseline_unit_price IS NOT NULL;
 
 -- Savings Calculations indexes
 CREATE INDEX idx_savings_company_id ON savings_calculations(company_id);
 CREATE INDEX idx_savings_order_item ON savings_calculations(order_item_id);
-CREATE INDEX idx_savings_baseline_order ON savings_calculations(baseline_order_id);
 CREATE INDEX idx_savings_chosen_supplier ON savings_calculations(chosen_supplier_id);
-CREATE INDEX idx_savings_baseline_supplier ON savings_calculations(baseline_supplier_id);
 CREATE INDEX idx_savings_best_external ON savings_calculations(best_external_supplier_id) WHERE best_external_supplier_id IS NOT NULL;
 CREATE INDEX idx_savings_is_saving ON savings_calculations(is_saving) WHERE is_saving = true;
 CREATE INDEX idx_savings_date ON savings_calculations(calculation_date);
@@ -109,18 +102,9 @@ CREATE INDEX idx_invoice_items_invoice_product ON invoice_line_items(invoice_id,
 -- For queries like: "Search for specific invoice's supplier"
 CREATE INDEX idx_invoices_supplier_invoice_number ON invoices(supplier_id, invoice_number);
 
--- 8. Baseline pricing queries (PRODUCTION CRITICAL)
--- For queries like: "Get all baseline products for a company's internal supplier"
-CREATE INDEX idx_supplier_products_baseline_lookup ON supplier_products(supplier_id, master_product_id) WHERE is_baseline = true;
-
--- For queries like: "Get savings calculations for a specific baseline order"
-CREATE INDEX idx_savings_baseline_order_date ON savings_calculations(baseline_order_id, calculation_date);
-
+-- 8. Savings queries (PRODUCTION CRITICAL)
 -- For queries like: "Get all savings for orders in date range"
 CREATE INDEX idx_savings_date_is_saving ON savings_calculations(calculation_date, is_saving);
-
--- For queries like: "Find baseline orders for a company in date range"
-CREATE INDEX idx_orders_baseline_company_date ON orders(supplier_id, baseline_upload_date) WHERE is_baseline_order = true;
 
 -- PARTIAL INDEXES
 -- ============================================
@@ -137,9 +121,8 @@ CREATE INDEX idx_orders_pending ON orders(location_id, order_date) WHERE status 
 -- Optimized for historical analysis queries
 CREATE INDEX idx_orders_delivered ON orders(location_id, order_date) WHERE status = 'delivered';
 
--- 4. External suppliers only (for price comparison against baseline)
--- Excludes internal suppliers from pricing queries
-CREATE INDEX idx_suppliers_external ON suppliers(id, name) WHERE is_internal = false;
+-- 4. Active suppliers (for price comparison queries)
+CREATE INDEX idx_suppliers_active_lookup ON suppliers(id, name) WHERE is_active = true;
 
 -- 5. Available supplier products (for active pricing queries)
 -- Excludes discontinued/out of stock items
@@ -155,13 +138,12 @@ CREATE INDEX idx_supplier_products_available ON supplier_products(master_product
 -- - Dashboard loading (location-based queries)
 -- - Date range filtering and reporting  
 -- - Order workflow management
--- - Price comparison features (baseline vs external)
--- - Billing system queries (baseline order tracking)
+-- - Price comparison features
 -- - Savings calculations and analytics
 -- - Temporal price history queries
 --
 -- Index Types:
--- - UNIQUE: Enforce data integrity (external supplier names, internal supplier per company)
+-- - UNIQUE: Enforce data integrity (supplier names)
 -- - PARTIAL (WHERE clause): Smaller, faster indexes for specific query patterns
 -- - COMPOSITE: Multi-column indexes for complex queries
 -- - GIN: Full-text search on product descriptions

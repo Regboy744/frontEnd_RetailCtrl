@@ -1,9 +1,9 @@
 import { supabase, faker } from './util/config.js'
 
-const seedOrderItems = async (numEntries) => {
+const seedOrderItems = async (numEntriesPerOrder) => {
  const { data: orders, error: ordersError } = await supabase
   .from('orders')
-  .select('id, supplier_id')
+  .select('id')
 
  if (ordersError) {
   console.error('Error fetching orders:', ordersError)
@@ -13,21 +13,9 @@ const seedOrderItems = async (numEntries) => {
   throw new Error('No orders found in DB. Seed orders first.')
  }
 
- const { data: masterProducts, error: masterError } = await supabase
-  .from('master_products')
-  .select('id')
-
- if (masterError) {
-  console.error('Error fetching master products:', masterError)
-  throw masterError
- }
- if (!masterProducts || masterProducts.length === 0) {
-  throw new Error('No master products found in DB. Seed master_products first.')
- }
-
  const { data: supplierProducts, error: supplierError } = await supabase
   .from('supplier_products')
-  .select('id, supplier_id, master_product_id, current_price')
+  .select('id, master_product_id, current_price')
 
  if (supplierError) {
   console.error('Error fetching supplier products:', supplierError)
@@ -41,31 +29,63 @@ const seedOrderItems = async (numEntries) => {
 
  const orderItems = []
 
- for (let i = 0; i < numEntries; i++) {
-  const order = faker.helpers.arrayElement(orders)
+ for (const order of orders) {
+  const itemCount = faker.number.int({ min: 1, max: numEntriesPerOrder })
 
-  const matchingSupplierProducts = supplierProducts.filter(
-   (sp) => sp.supplier_id === order.supplier_id,
-  )
+  for (let index = 0; index < itemCount; index++) {
+   const supplierProduct = faker.helpers.arrayElement(supplierProducts)
 
-  if (matchingSupplierProducts.length === 0) {
-   continue
+   const quantity = faker.number.int({ min: 1, max: 120 })
+   const unitPrice = parseFloat(
+    (
+     supplierProduct.current_price *
+     faker.number.float({
+      min: 0.92,
+      max: 1.12,
+      precision: 0.0001,
+     })
+    ).toFixed(4),
+   )
+   const totalPrice = parseFloat((quantity * unitPrice).toFixed(4))
+
+   let baselineUnitPrice = null
+   let overrideReason = null
+
+   if (faker.datatype.boolean({ probability: 0.7 })) {
+    const baselineMultiplier = faker.number.float({
+     min: 0.9,
+     max: 1.2,
+     precision: 0.0001,
+    })
+    baselineUnitPrice = parseFloat(
+     (supplierProduct.current_price * baselineMultiplier).toFixed(4),
+    )
+
+    if (baselineUnitPrice > unitPrice) {
+     overrideReason = faker.helpers.arrayElement([
+      'Supplier promotion applied',
+      'Negotiated seasonal discount',
+      'Matched competitor pricing',
+     ])
+    } else if (baselineUnitPrice < unitPrice) {
+     overrideReason = faker.helpers.arrayElement([
+      'Expedited order premium',
+      'Limited stock surcharge',
+     ])
+    }
+   }
+
+   orderItems.push({
+    order_id: order.id,
+    master_product_id: supplierProduct.master_product_id,
+    supplier_product_id: supplierProduct.id,
+    quantity: quantity,
+    unit_price: unitPrice,
+    total_price: totalPrice,
+    baseline_unit_price: baselineUnitPrice,
+    override_reason: overrideReason,
+   })
   }
-
-  const supplierProduct = faker.helpers.arrayElement(matchingSupplierProducts)
-
-  const quantity = faker.number.int({ min: 1, max: 100 })
-  const unitPrice = parseFloat(supplierProduct.current_price.toFixed(4))
-  const totalPrice = parseFloat((quantity * unitPrice).toFixed(4))
-
-  orderItems.push({
-   order_id: order.id,
-   master_product_id: supplierProduct.master_product_id,
-   supplier_product_id: supplierProduct.id,
-   quantity: quantity,
-   unit_price: unitPrice,
-   total_price: totalPrice,
-  })
  }
 
  const { data, error } = await supabase.from('order_items').insert(orderItems)
@@ -85,6 +105,7 @@ const seedOrderItems = async (numEntries) => {
  const avgQuantity = totalQuantity / orderItems.length
  const avgPrice = totalValue / orderItems.length
 
+ console.log(`- Orders seeded: ${orders.length}`)
  console.log(`- Total Items: ${orderItems.length}`)
  console.log(`- Total Quantity: ${totalQuantity}`)
  console.log(`- Total Value: €${totalValue.toFixed(2)}`)
@@ -92,4 +113,4 @@ const seedOrderItems = async (numEntries) => {
  console.log(`- Average Price per Item: €${avgPrice.toFixed(2)}`)
 }
 
-await seedOrderItems(200)
+await seedOrderItems(5)
