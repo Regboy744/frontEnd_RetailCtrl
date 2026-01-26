@@ -5,7 +5,7 @@
     "src/**/*",
     "src/**/*.vue",
     "typed-router.d.ts",
-    "src/types/database.types.ts"
+    "src/types/shared/database.types.ts"
   ],
   "exclude": ["src/**/__tests__/*"],
   "compilerOptions": {
@@ -15,6 +15,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
   }
 }

@@ -32,6 +32,25 @@ RETURNS UUID AS $$
   SELECT COALESCE((auth.jwt()->>'company_id')::uuid, '00000000-0000-0000-0000-000000000000'::uuid);
 $$ LANGUAGE SQL STABLE;
 
+-- Get user's location_id from JWT
+CREATE OR REPLACE FUNCTION get_user_location_id()
+RETURNS UUID AS $$
+  SELECT COALESCE((auth.jwt()->>'location_id')::uuid, '00000000-0000-0000-0000-000000000000'::uuid);
+$$ LANGUAGE SQL STABLE;
+
+-- ============================================
+-- TABLE 0: BRANDS
+-- ============================================
+ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
+
+-- Anyone authenticated can read brands (needed for dropdowns, etc.)
+CREATE POLICY "authenticated_select_brands" ON brands FOR SELECT TO authenticated USING (true);
+
+-- Only master can manage brands
+CREATE POLICY "master_insert_brands" ON brands FOR INSERT TO authenticated WITH CHECK (is_master());
+CREATE POLICY "master_update_brands" ON brands FOR UPDATE TO authenticated USING (is_master());
+CREATE POLICY "master_delete_brands" ON brands FOR DELETE TO authenticated USING (is_master());
+
 -- ============================================
 -- TABLE 1: COMPANIES
 -- ============================================
@@ -137,69 +156,7 @@ CREATE POLICY "admin_update_supplier_company_prices" ON supplier_company_prices 
   USING (is_admin() AND company_id = get_user_company_id());
 
 -- ============================================
--- TABLE 8: INVOICES (NEW)
--- ============================================
-ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "master_select_invoices" ON invoices FOR SELECT TO authenticated USING (is_master());
-CREATE POLICY "master_insert_invoices" ON invoices FOR INSERT TO authenticated WITH CHECK (is_master());
-CREATE POLICY "master_update_invoices" ON invoices FOR UPDATE TO authenticated USING (is_master());
-CREATE POLICY "master_delete_invoices" ON invoices FOR DELETE TO authenticated USING (is_master());
-
-CREATE POLICY "company_select_invoices" ON invoices FOR SELECT TO authenticated 
-  USING (
-    (is_admin() OR is_manager()) 
-    AND EXISTS (
-      SELECT 1 FROM locations 
-      WHERE locations.id = invoices.location_id 
-      AND locations.company_id = get_user_company_id()
-    )
-  );
-
-CREATE POLICY "admin_insert_invoices" ON invoices FOR INSERT TO authenticated 
-  WITH CHECK (
-    is_admin() 
-    AND EXISTS (
-      SELECT 1 FROM locations 
-      WHERE locations.id = invoices.location_id 
-      AND locations.company_id = get_user_company_id()
-    )
-  );
-
--- ============================================
--- TABLE 9: INVOICE_LINE_ITEMS (NEW)
--- ============================================
-ALTER TABLE invoice_line_items ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "master_select_invoice_line_items" ON invoice_line_items FOR SELECT TO authenticated USING (is_master());
-CREATE POLICY "master_insert_invoice_line_items" ON invoice_line_items FOR INSERT TO authenticated WITH CHECK (is_master());
-CREATE POLICY "master_update_invoice_line_items" ON invoice_line_items FOR UPDATE TO authenticated USING (is_master());
-CREATE POLICY "master_delete_invoice_line_items" ON invoice_line_items FOR DELETE TO authenticated USING (is_master());
-
-CREATE POLICY "company_select_invoice_line_items" ON invoice_line_items FOR SELECT TO authenticated 
-  USING (
-    (is_admin() OR is_manager()) 
-    AND EXISTS (
-      SELECT 1 FROM invoices 
-      JOIN locations ON locations.id = invoices.location_id
-      WHERE invoices.id = invoice_line_items.invoice_id 
-      AND locations.company_id = get_user_company_id()
-    )
-  );
-
-CREATE POLICY "admin_insert_invoice_line_items" ON invoice_line_items FOR INSERT TO authenticated 
-  WITH CHECK (
-    is_admin() 
-    AND EXISTS (
-      SELECT 1 FROM invoices 
-      JOIN locations ON locations.id = invoices.location_id
-      WHERE invoices.id = invoice_line_items.invoice_id 
-      AND locations.company_id = get_user_company_id()
-    )
-  );
-
--- ============================================
--- TABLE 10: ORDERS (NEW)
+-- TABLE 8: ORDERS (NEW)
 -- ============================================
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
@@ -285,9 +242,77 @@ CREATE POLICY "company_select_supplier_price_history" ON supplier_price_history 
   USING (is_admin() OR is_manager());
 
 -- ============================================
+-- TABLE 14: COMPANY_SUPPLIER_SETTINGS
+-- ============================================
+ALTER TABLE company_supplier_settings ENABLE ROW LEVEL SECURITY;
+
+-- Master has full access
+CREATE POLICY "master_select_company_supplier_settings" 
+    ON company_supplier_settings FOR SELECT TO authenticated USING (is_master());
+CREATE POLICY "master_insert_company_supplier_settings" 
+    ON company_supplier_settings FOR INSERT TO authenticated WITH CHECK (is_master());
+CREATE POLICY "master_update_company_supplier_settings" 
+    ON company_supplier_settings FOR UPDATE TO authenticated USING (is_master());
+CREATE POLICY "master_delete_company_supplier_settings" 
+    ON company_supplier_settings FOR DELETE TO authenticated USING (is_master());
+
+-- Admin/Manager can view their company's settings
+CREATE POLICY "company_select_company_supplier_settings" 
+    ON company_supplier_settings FOR SELECT TO authenticated 
+    USING ((is_admin() OR is_manager()) AND company_id = get_user_company_id());
+
+-- Admin can manage settings
+CREATE POLICY "admin_insert_company_supplier_settings" 
+    ON company_supplier_settings FOR INSERT TO authenticated 
+    WITH CHECK (is_admin() AND company_id = get_user_company_id());
+CREATE POLICY "admin_update_company_supplier_settings" 
+    ON company_supplier_settings FOR UPDATE TO authenticated 
+    USING (is_admin() AND company_id = get_user_company_id());
+CREATE POLICY "admin_delete_company_supplier_settings" 
+    ON company_supplier_settings FOR DELETE TO authenticated 
+    USING (is_admin() AND company_id = get_user_company_id());
+
+-- ============================================
+-- TABLE 15: LOCATION_SUPPLIER_CREDENTIALS
+-- ============================================
+ALTER TABLE location_supplier_credentials ENABLE ROW LEVEL SECURITY;
+
+-- Master has full access
+CREATE POLICY "master_select_location_supplier_credentials" 
+    ON location_supplier_credentials FOR SELECT TO authenticated USING (is_master());
+CREATE POLICY "master_insert_location_supplier_credentials" 
+    ON location_supplier_credentials FOR INSERT TO authenticated WITH CHECK (is_master());
+CREATE POLICY "master_update_location_supplier_credentials" 
+    ON location_supplier_credentials FOR UPDATE TO authenticated USING (is_master());
+CREATE POLICY "master_delete_location_supplier_credentials" 
+    ON location_supplier_credentials FOR DELETE TO authenticated USING (is_master());
+
+-- Admin can view ALL company credentials
+CREATE POLICY "admin_select_location_supplier_credentials" 
+    ON location_supplier_credentials FOR SELECT TO authenticated 
+    USING (is_admin() AND company_id = get_user_company_id());
+
+-- Manager can ONLY view their own location's credentials
+CREATE POLICY "manager_select_location_supplier_credentials" 
+    ON location_supplier_credentials FOR SELECT TO authenticated 
+    USING (is_manager() AND company_id = get_user_company_id() AND location_id = get_user_location_id());
+
+-- Admin can manage credentials
+CREATE POLICY "admin_insert_location_supplier_credentials" 
+    ON location_supplier_credentials FOR INSERT TO authenticated 
+    WITH CHECK (is_admin() AND company_id = get_user_company_id());
+CREATE POLICY "admin_update_location_supplier_credentials" 
+    ON location_supplier_credentials FOR UPDATE TO authenticated 
+    USING (is_admin() AND company_id = get_user_company_id());
+CREATE POLICY "admin_delete_location_supplier_credentials" 
+    ON location_supplier_credentials FOR DELETE TO authenticated 
+    USING (is_admin() AND company_id = get_user_company_id());
+
+-- ============================================
 -- COMMENTS
 -- ============================================
 COMMENT ON FUNCTION is_master IS 'Returns true if authenticated user has master role';
 COMMENT ON FUNCTION is_admin IS 'Returns true if authenticated user has admin role';
 COMMENT ON FUNCTION is_manager IS 'Returns true if authenticated user has manager role';
 COMMENT ON FUNCTION get_user_company_id IS 'Returns company_id from JWT claims';
+COMMENT ON FUNCTION get_user_location_id IS 'Returns location_id from JWT claims';

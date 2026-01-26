@@ -2,18 +2,17 @@
 
 # Define seed files in execution order
 seeds=(
-	"companies_seed.js"
-	"suppliers_seed.js"
-	"master_products_seed.js"
-	"locations_seed.js"
-	"user_seed.js"
+	# "brands_seed.js"
+	# "companies_seed.js"
+	# "suppliers_seed.js"
+	# "master_products_seed.js"
+	# "locations_seed.js"
+	# "user_seed.js"
 	"user_profile_seed.js"
-	"supplier_products_seed.js"
-	"invoices_seed.js"
-	"invoice_line_items_seed.js"
-	"orders_seed.js"
-	"order_items_seed.js"
-	"savings_calculations.seed.js"
+	# "supplier_products_seed.js"
+	# "orders_seed.js"
+	# "order_items_seed.js"
+	# "savings_calculations.seed.js"
 )
 
 echo "Starting individual seed execution..."

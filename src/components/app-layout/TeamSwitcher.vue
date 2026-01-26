@@ -28,10 +28,13 @@ const props = defineProps<{
 }>()
 
 const { isMobile } = useSidebar()
-const activeStores = ref(props.stores[0])
+
+const activeStores = ref(
+ props.stores[0] ?? { name: '', logo: null, number: '' },
+)
 </script>
 
-<template>
+<template v-if="activeStores">
  <SidebarMenu>
   <SidebarMenuItem>
    <DropdownMenu>

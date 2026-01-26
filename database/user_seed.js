@@ -33,7 +33,7 @@ const { supabase } = await import('./util/config.js')
 
 const users = Array.from({ length: 30 }, (_, i) => ({
  email: `user${i + 1}@example.com`,
- password: `Password${String(i + 1).padStart(3, '0')}!`,
+ password: `Password`,
 }))
 
 async function bulkSignup() {

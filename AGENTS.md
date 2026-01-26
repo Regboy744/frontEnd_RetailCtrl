@@ -25,22 +25,22 @@
 - **Testing:** Use Vitest for unit tests. Place tests in `src/__tests__`.
 - **General:** Keep code readable, maintainable, and consistent. Follow best practices for Vue, TypeScript, Pinia, and Tailwind.
 
-## Supabase postegress Database on the cloud.
+## Supabase PostgreSQL Database on the cloud.
 
 - This project has a MCP connected to the supabase.
-- We create the migrations local and send to the supbase
+- We create the migrations local and send to the supabase
 - Follow the db best practices.
 
 ## Retail Ctrl
 
-This is a Saas brand new, not in productions yet. It is a MVP - Minimum Value Products.
+This is a SaaS brand new, not in production yet. It is a MVP - Minimum Value Product.
 
-With this app, I aim get retailers, small to medium shops. Usually, the shops belongs to a company, so each company can have many stores.
+With this app, I aim to get retailers, small to medium shops. Usually, the shops belong to a company, so each company can have many stores.
 
 Start features:
 
 - Price check: Each store can use my app to check for the best price available among the registered suppliers.
 
-- Ocr: This is for the invoices, where the users base on the role can get the structured data from 100s of invoices.
+- OCR: This is for the invoices, where the users based on the role can get the structured data from 100s of invoices.
 
-- The system will have a auth feature, also role managment.
+- The system will have an auth feature, also role management.

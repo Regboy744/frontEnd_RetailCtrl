@@ -1,28 +1,21 @@
 <script setup lang="ts">
-import { supabase } from '@/lib/supabaseClient'
-import { h, ref } from 'vue'
-import type { Tables } from '@/types/database.types'
+import { h } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
+import type { DataTableConfig } from '@/types/shared/custom.types'
 import { RouterLink } from 'vue-router'
-import type { DataTableConfig } from '@/types/custom.types'
-import DataTable from '@/components/app-layout/dataTable/DataTable.vue'
+import DataTable from '@/components/appDataTable/DataTable.vue'
 import Button from '@/components/ui/button/Button.vue'
 import { ArrowUpDown } from 'lucide-vue-next'
-import DataTableAction from '@/components/app-layout/dataTable/DataTableAction.vue'
+import type { CompaniesType } from '@/features/companies/api/queries'
+import CompanyActions from '@/features/companies/components/CompanyActions.vue'
+import CompanyEditForm from '@/features/companies/components/CompanyEditForm.vue'
+import { useCompanies } from '@/features/companies/composables/useCompanies'
+import SharedSheet from '@/components/shared/SharedSheet.vue'
 
-const companies = ref<Tables<'companies'>[] | null>(null)
+const { companies, fetchCompanies, saveCompany, removeCompany } = useCompanies()
 
-const getCompanies = async () => {
- const { data, error } = await supabase.from('companies').select()
-
- if (error) console.log(error)
-
- companies.value = data
-
- return data
-}
-
-await getCompanies()
+// Fetch the companies through the useCompanies composable
+await fetchCompanies()
 
 // Table config
 const tableConfig: DataTableConfig = {
@@ -31,36 +24,15 @@ const tableConfig: DataTableConfig = {
   pagination: true,
   sorting: true,
   filtering: true,
-  columnVisibility: false,
+  columnVisibility: true,
  },
  pageSize: 20,
  searchColumn: 'name',
  searchPlaceholder: 'Filter companies by name ...',
 }
 
-//Table
-
-const columns: ColumnDef<Tables<'companies'>>[] = [
- // {
- //  id: 'select',
- //  header: ({ table }) =>
- //   h('div', { class: 'flex items-center gap-2' }, [
- //    h(Checkbox, {
- //     modelValue: table.getIsAllPageRowsSelected(),
- //     'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
- //      table.toggleAllPageRowsSelected(!!value),
- //     ariaLabel: 'Select all',
- //    }),
- //    ,
- //   ]),
- //  cell: ({ row }) =>
- //   h(Checkbox, {
- //    modelValue: row.getIsSelected(),
- //    'onUpdate:modelValue': (value: boolean | 'indeterminate') =>
- //     row.toggleSelected(!!value),
- //    ariaLabel: 'Select row',
- //   }),
- // },
+// Table columns
+const columns: ColumnDef<CompaniesType[0]>[] = [
  {
   accessorKey: 'name',
   header: ({ column }) => {
@@ -79,7 +51,7 @@ const columns: ColumnDef<Tables<'companies'>>[] = [
     RouterLink,
     {
      to: `/app/companies/${row.original.id}`,
-     class: 'text-left font-medium hover:muted block w-full',
+     class: 'text-left font-medium block w-full py-2.5 px-4 -my-2.5 -mx-4',
     },
     () => row.getValue('name'),
    )
@@ -88,12 +60,11 @@ const columns: ColumnDef<Tables<'companies'>>[] = [
   enableHiding: true,
  },
  {
-  accessorKey: 'brand',
+  accessorKey: 'brands',
   header: () => h('div', { class: 'text-left' }, 'Brand'),
   cell: ({ row }) => {
-   const brandName =
-    row.getValue('brand') === 'super-value' ? 'Super value' : 'Centra'
-   return h('div', { class: 'text-left font-medium' }, brandName)
+   const brand = row.original.brands
+   return h('div', { class: 'text-left font-medium' }, brand?.name || '-')
   },
  },
  {
@@ -105,7 +76,7 @@ const columns: ColumnDef<Tables<'companies'>>[] = [
  },
  {
   accessorKey: 'email',
-  header: () => h('div', { class: 'text-left' }, 'email'),
+  header: () => h('div', { class: 'text-left' }, 'Email'),
   cell: ({ row }) => {
    return h('div', { class: 'text-left font-medium' }, row.getValue('email'))
   },
@@ -121,12 +92,19 @@ const columns: ColumnDef<Tables<'companies'>>[] = [
  {
   id: 'actions',
   enableHiding: false,
+  header: () => h('div', { class: 'text-center' }, 'Actions'),
   cell: ({ row }) => {
    return h(
     'div',
-    { class: 'relative' },
-    h(DataTableAction, {
-     row: row.original,
+    { class: 'text-center' },
+    h(CompanyActions, {
+     company: row.original,
+     onSave: async (data) => {
+      await saveCompany(data)
+     },
+     onDelete: async (id) => {
+      await removeCompany(id)
+     },
     }),
    )
   },
@@ -140,5 +118,25 @@ const columns: ColumnDef<Tables<'companies'>>[] = [
   :columns="columns"
   :data="companies"
   :config="tableConfig"
- />
+ >
+  <template #top-table>
+   <SharedSheet
+    trigger-label="New Company"
+    title="Add New Company"
+    description="Create a new company in the system"
+   >
+    <!-- Pass the component here -->
+    <template #content="{ close }">
+     <CompanyEditForm
+      @save="
+       async (company) => {
+        await saveCompany(company)
+        close()
+       }
+      "
+     />
+    </template>
+   </SharedSheet>
+  </template>
+ </DataTable>
 </template>

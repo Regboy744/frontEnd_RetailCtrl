@@ -1,59 +1,38 @@
 import { supabase, faker } from './util/config.js'
-const seedCompanies = async (numEntries) => {
- const companies = []
 
- const irishCounties = [
-  'Dublin',
-  'Cork',
-  'Galway',
-  'Limerick',
-  'Waterford',
-  'Kerry',
-  'Clare',
-  'Mayo',
-  'Donegal',
-  'Tipperary',
-  'Kildare',
-  'Wexford',
-  'Kilkenny',
- ]
+// NOTE: Company addresses are now stored in the dedicated 'addresses' table
+// Run addresses_seed.js after this seed to populate company addresses
+// NOTE: Run brands_seed.js before this seed to ensure brands exist
 
- // Real Irish Eircode routing keys by county
- const eircodeRouting = {
-  Dublin: ['D01', 'D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08'],
-  Cork: ['T12', 'T23', 'T45'],
-  Galway: ['H91', 'H53', 'H62'],
-  Limerick: ['V94', 'V95'],
-  Waterford: ['X91'],
-  Kerry: ['V92', 'V93'],
-  Clare: ['V14', 'V15'],
-  Mayo: ['F23', 'F26'],
-  Donegal: ['F92', 'F93'],
-  Tipperary: ['E25', 'E32'],
-  Kildare: ['W23', 'W91'],
-  Wexford: ['Y21', 'Y25'],
-  Kilkenny: ['R95'],
+// Fetch existing brands to use their IDs
+const getBrands = async () => {
+ const { data, error } = await supabase.from('brands').select('id, name')
+
+ if (error) {
+  console.error('Error fetching brands:', error)
+  throw error
  }
 
- for (let i = 0; i < numEntries; i++) {
-  const county = faker.helpers.arrayElement(irishCounties)
-  const routingKey = faker.helpers.arrayElement(eircodeRouting[county])
+ return data
+}
 
+const seedCompanies = async (numEntries) => {
+ const brands = await getBrands()
+
+ if (!brands || brands.length === 0) {
+  console.error('No brands found. Please run brands_seed.js first.')
+  return
+ }
+
+ const companies = []
+
+ for (let i = 0; i < numEntries; i++) {
+  const randomBrand = faker.helpers.arrayElement(brands)
   companies.push({
    name: faker.company.name(),
    email: faker.internet.email(),
    phone: `+353 ${faker.helpers.arrayElement(['1', '21', '61', '91'])} ${faker.string.numeric(3)} ${faker.string.numeric(4)}`,
-   addresses: {
-    primary: {
-     type: 'primary',
-     street_address: faker.location.streetAddress(),
-     city: faker.location.city(),
-     county: county,
-     eircode: `${routingKey} ${faker.string.alphanumeric({ length: 4, casing: 'upper' })}`,
-     country: 'Ireland',
-    },
-   },
-   brand: faker.helpers.arrayElement(['centra', 'super-value']),
+   brand_id: randomBrand.id,
    subscription_tier: faker.helpers.arrayElement([
     'essential',
     'advanced',

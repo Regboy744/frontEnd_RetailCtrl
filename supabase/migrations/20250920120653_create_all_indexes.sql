@@ -13,9 +13,14 @@ CREATE UNIQUE INDEX suppliers_name_unique ON suppliers(name);
 -- BASIC INDEXES
 -- ============================================
 
+-- Brands indexes
+CREATE INDEX idx_brands_active ON brands(id) WHERE is_active = true;
+
 -- Master Products indexes
+CREATE INDEX idx_master_products_brand ON master_products(brand_id);
 CREATE INDEX idx_master_products_ean ON master_products(ean_code);
 CREATE INDEX idx_master_products_article ON master_products(article_code);
+CREATE INDEX idx_master_products_brand_article ON master_products(brand_id, article_code);
 CREATE INDEX idx_master_products_description ON master_products USING GIN(to_tsvector('english', description));
 
 -- Supplier indexes
@@ -26,6 +31,8 @@ CREATE INDEX idx_supplier_products_master ON supplier_products(master_product_id
 CREATE INDEX idx_supplier_products_supplier ON supplier_products(supplier_id);
 CREATE INDEX idx_supplier_products_price ON supplier_products(current_price);
 CREATE INDEX idx_supplier_products_updated ON supplier_products(last_updated);
+CREATE INDEX idx_supplier_products_scraped_from ON supplier_products(scraped_from_company_id) 
+    WHERE scraped_from_company_id IS NOT NULL;
 
 -- Supplier Price History indexes
 CREATE INDEX idx_supplier_price_history_temporal ON supplier_price_history(supplier_product_id, effective_from DESC);
@@ -43,17 +50,12 @@ CREATE INDEX idx_supplier_negotiated_prices_temporal ON supplier_company_prices(
 CREATE INDEX idx_locations_company ON locations(company_id);
 CREATE INDEX idx_user_profiles_company ON user_profiles(company_id);
 CREATE INDEX idx_user_profiles_location ON user_profiles(location_id);
-CREATE INDEX idx_invoices_location ON invoices(location_id);
 CREATE INDEX idx_orders_location ON orders(location_id);
-CREATE INDEX idx_invoices_invoice_number ON invoices(invoice_number);
 
 -- Time-based indexes
-CREATE INDEX idx_invoices_date ON invoices(invoice_date);
 CREATE INDEX idx_orders_date ON orders(order_date);
 
 -- Relationship indexes
-CREATE INDEX idx_invoice_items_invoice ON invoice_line_items(invoice_id);
-CREATE INDEX idx_invoice_items_product ON invoice_line_items(master_product_id);
 CREATE INDEX idx_order_items_order ON order_items(order_id);
 CREATE INDEX idx_order_items_product ON order_items(master_product_id);
 CREATE INDEX idx_order_items_baseline_price ON order_items(baseline_unit_price) WHERE baseline_unit_price IS NOT NULL;
@@ -72,9 +74,6 @@ CREATE INDEX idx_savings_date ON savings_calculations(calculation_date);
 -- ============================================
 
 -- 1. Store-based date range queries (HIGH PRIORITY)
--- For queries like: "Get all invoices for this location in date range"
-CREATE INDEX idx_invoices_location_date ON invoices(location_id, invoice_date);
-
 -- For queries like: "Get all orders for this location in date range" 
 CREATE INDEX idx_orders_location_date ON orders(location_id, order_date);
 
@@ -82,27 +81,18 @@ CREATE INDEX idx_orders_location_date ON orders(location_id, order_date);
 -- For queries like: "Get all pending orders for this location"
 CREATE INDEX idx_orders_location_status ON orders(location_id, status);
 
--- 3. Supplier performance queries
--- For queries like: "Get supplier invoices in date range"
-CREATE INDEX idx_invoices_supplier_date ON invoices(supplier_id, invoice_date);
-
--- 4. Price comparison queries
+-- 3. Price comparison queries
 -- For queries like: "Compare prices for same product across suppliers"
 CREATE INDEX idx_supplier_products_product_supplier ON supplier_products(master_product_id, supplier_id);
 
--- 5. Billing and feature access queries
+-- 4. Billing and feature access queries
 -- For queries like: "Get companies by subscription tier"
 CREATE INDEX idx_companies_subscription_tier ON companies(id, subscription_tier);
 
--- 6. Invoice analysis queries
--- For queries like: "Analyze line items for specific invoice and product"
-CREATE INDEX idx_invoice_items_invoice_product ON invoice_line_items(invoice_id, master_product_id);
+-- 4.1 Companies by brand (for fetching master products)
+CREATE INDEX idx_companies_brand ON companies(brand_id) WHERE brand_id IS NOT NULL;
 
--- 7. Invoice data queries
--- For queries like: "Search for specific invoice's supplier"
-CREATE INDEX idx_invoices_supplier_invoice_number ON invoices(supplier_id, invoice_number);
-
--- 8. Savings queries (PRODUCTION CRITICAL)
+-- 5. Savings queries (PRODUCTION CRITICAL)
 -- For queries like: "Get all savings for orders in date range"
 CREATE INDEX idx_savings_date_is_saving ON savings_calculations(calculation_date, is_saving);
 
@@ -129,6 +119,35 @@ CREATE INDEX idx_suppliers_active_lookup ON suppliers(id, name) WHERE is_active 
 CREATE INDEX idx_supplier_products_available ON supplier_products(master_product_id, current_price) WHERE availability_status = 'available';
 
 -- ============================================
+-- CONFIG TABLES INDEXES
+-- ============================================
+
+-- Company Supplier Settings indexes
+CREATE INDEX idx_company_supplier_settings_company 
+    ON company_supplier_settings(company_id);
+CREATE INDEX idx_company_supplier_settings_supplier 
+    ON company_supplier_settings(supplier_id);
+CREATE INDEX idx_company_supplier_settings_lookup 
+    ON company_supplier_settings(company_id, supplier_id);
+CREATE INDEX idx_company_supplier_settings_active 
+    ON company_supplier_settings(company_id) WHERE is_active = true;
+
+-- Location Supplier Credentials indexes
+CREATE INDEX idx_location_supplier_credentials_company 
+    ON location_supplier_credentials(company_id);
+CREATE INDEX idx_location_supplier_credentials_location 
+    ON location_supplier_credentials(location_id);
+CREATE INDEX idx_location_supplier_credentials_supplier 
+    ON location_supplier_credentials(supplier_id);
+CREATE INDEX idx_location_supplier_credentials_lookup 
+    ON location_supplier_credentials(location_id, supplier_id);
+CREATE INDEX idx_location_supplier_credentials_active 
+    ON location_supplier_credentials(company_id) WHERE is_active = true;
+CREATE INDEX idx_location_supplier_credentials_failed 
+    ON location_supplier_credentials(last_login_status) 
+    WHERE last_login_status IN ('failed', 'expired');
+
+-- ============================================
 -- OPTIMIZATION NOTES
 -- ============================================
 -- All indexes are now consolidated in this single file.
@@ -141,6 +160,8 @@ CREATE INDEX idx_supplier_products_available ON supplier_products(master_product
 -- - Price comparison features
 -- - Savings calculations and analytics
 -- - Temporal price history queries
+-- - Config settings lookups
+-- - Credential management and scraper health monitoring
 --
 -- Index Types:
 -- - UNIQUE: Enforce data integrity (supplier names)

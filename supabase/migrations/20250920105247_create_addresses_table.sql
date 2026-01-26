@@ -1,4 +1,5 @@
--- Fundamental, no dependents
+-- Depends on: companies, locations
+
 CREATE TABLE addresses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
@@ -33,4 +34,4 @@ CREATE TABLE addresses (
     UNIQUE(location_id, address_type)
 );
 
-
+-- TODO: Add the eircode mask validation on the migration

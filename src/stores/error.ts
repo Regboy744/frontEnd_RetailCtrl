@@ -1,47 +1,49 @@
-import type { CustomError, ExtendedPostgrestError } from '@/types/custom.types'
+import type {
+ CustomError,
+ ExtendedPostgrestError,
+} from '@/types/shared/custom.types'
 import type { PostgrestError } from '@supabase/supabase-js'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useErrorStore = defineStore('error-store', () => {
-  const activeError = ref<null | CustomError | ExtendedPostgrestError>(null)
-  const isCustomError = ref(false)
+ const activeError = ref<null | CustomError | ExtendedPostgrestError>(null)
+ const isCustomError = ref(false)
 
-  const setError = ({
-    error,
-    customCode,
-  }: {
-    error: string | PostgrestError | Error
-    customCode?: number
-  }) => {
-    if (typeof error === 'string') isCustomError.value = true
+ const setError = ({
+  error,
+  customCode,
+ }: {
+  error: string | PostgrestError | Error
+  customCode?: number
+ }) => {
+  if (typeof error === 'string') isCustomError.value = true
 
-    if (typeof error === 'string' || error instanceof Error) {
-      activeError.value = typeof error === 'string' ? Error(error) : error
-      activeError.value.customCode = customCode || 500
-      return
-    }
-
-    activeError.value = error as ExtendedPostgrestError
-    ;(activeError.value as ExtendedPostgrestError).statusCode =
-      customCode || 500
+  if (typeof error === 'string' || error instanceof Error) {
+   activeError.value = typeof error === 'string' ? Error(error) : error
+   activeError.value.customCode = customCode || 500
+   return
   }
 
-  const clearError = () => {
-    activeError.value = null
-    isCustomError.value = false
-  }
+  activeError.value = error as ExtendedPostgrestError
+  ;(activeError.value as ExtendedPostgrestError).statusCode = customCode || 500
+ }
 
-  return {
-    activeError,
-    setError,
-    isCustomError,
-    clearError,
-  }
+ const clearError = () => {
+  activeError.value = null
+  isCustomError.value = false
+ }
+
+ return {
+  activeError,
+  setError,
+  isCustomError,
+  clearError,
+ }
 })
 
 if (import.meta.hot) {
-  import.meta.hot.accept(acceptHMRUpdate(useErrorStore, import.meta.hot))
+ import.meta.hot.accept(acceptHMRUpdate(useErrorStore, import.meta.hot))
 }
 
 /* The error-store it is minitially false,

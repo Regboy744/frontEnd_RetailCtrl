@@ -3,7 +3,7 @@ import AppSidebar from '@/components/app-layout/AppSidebar.vue'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 import AppHeader from '@/components/app-layout/AppHeader.vue'
-import { usePageMeta } from '@/composables/usePageMeta'
+import { usePageMeta } from '@/composables/shared/usePageMeta'
 
 const { title } = usePageMeta()
 </script>

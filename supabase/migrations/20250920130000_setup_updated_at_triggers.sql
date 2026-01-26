@@ -12,6 +12,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply triggers to all tables with updated_at columns
+CREATE TRIGGER trigger_brands_updated_at
+    BEFORE UPDATE ON brands
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER trigger_companies_updated_at
     BEFORE UPDATE ON companies
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -32,12 +36,16 @@ CREATE TRIGGER trigger_user_profiles_updated_at
     BEFORE UPDATE ON user_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER trigger_invoices_updated_at
-    BEFORE UPDATE ON invoices
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER trigger_orders_updated_at
     BEFORE UPDATE ON orders
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_company_supplier_settings_updated_at
+    BEFORE UPDATE ON company_supplier_settings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_location_supplier_credentials_updated_at
+    BEFORE UPDATE ON location_supplier_credentials
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 

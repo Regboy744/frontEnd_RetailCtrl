@@ -1,5 +1,7 @@
 import { supabase, faker } from './util/config.js'
 
+// NOTE: Run brands_seed.js before this seed to ensure brands exist
+
 const groceryAccounts = [
  'DAIRY_PRODUCTS',
  'FRESH_MEAT',
@@ -22,6 +24,18 @@ const groceryAccounts = [
  'PAPER_PRODUCTS',
  'HOUSEHOLD_ITEMS',
 ]
+
+// Fetch existing brands to use their IDs
+const getBrands = async () => {
+ const { data, error } = await supabase.from('brands').select('id, name')
+
+ if (error) {
+  console.error('Error fetching brands:', error)
+  throw error
+ }
+
+ return data
+}
 
 const generateArticleCode = () => {
  return faker.string.numeric(10)
@@ -97,32 +111,44 @@ const generateUnitSize = () => {
  return faker.helpers.arrayElement(units)
 }
 
-const seedMasterProduct = async (numEntries) => {
- const masterProducts = []
+const seedMasterProduct = async (numEntriesPerBrand) => {
+ const brands = await getBrands()
 
- for (let i = 0; i < numEntries; i++) {
-  masterProducts.push({
-   article_code: generateArticleCode(),
-   ean_code: generateEanCode(),
-   description: generateProductDescription(),
-   unit_size: generateUnitSize(),
-   account: faker.helpers.arrayElement(groceryAccounts),
-  })
+ if (!brands || brands.length === 0) {
+  console.error('No brands found. Please run brands_seed.js first.')
+  return
  }
 
- const { data, error } = await supabase
-  .from('master_products')
-  .insert(masterProducts)
+ // Create products for each brand
+ for (const brand of brands) {
+  const masterProducts = []
 
- if (error) {
-  console.error('Insert error:', error)
-  throw error
+  for (let i = 0; i < numEntriesPerBrand; i++) {
+   masterProducts.push({
+    brand_id: brand.id,
+    article_code: generateArticleCode(),
+    ean_code: generateEanCode(),
+    ean_history: [],
+    description: generateProductDescription(),
+    unit_size: generateUnitSize(),
+    account: faker.helpers.arrayElement(groceryAccounts),
+   })
+  }
+
+  const { data, error } = await supabase
+   .from('master_products')
+   .insert(masterProducts)
+
+  if (error) {
+   console.error(`Insert error for brand ${brand.name}:`, error)
+   throw error
+  }
+
+  console.log(
+   `Successfully inserted ${masterProducts.length} master products for brand: ${brand.name}`,
+  )
  }
-
- console.log(
-  'Successfully inserted master products:',
-  data?.length || masterProducts.length,
- )
 }
 
-await seedMasterProduct(1000)
+// 500 products per brand (2 brands = 1000 total)
+await seedMasterProduct(500)

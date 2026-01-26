@@ -52,6 +52,8 @@ RETURNS TABLE (
     product_id UUID,
     article_code TEXT,
     description TEXT,
+    ean_code TEXT,
+    unit_size TEXT,
     supplier_id UUID,
     supplier_name TEXT,
     is_active BOOLEAN,
@@ -68,6 +70,8 @@ BEGIN
         mp.id,
         mp.article_code,
         mp.description,
+        mp.ean_code,
+        mp.unit_size,
         s.id,
         s.name,
         s.is_active,
@@ -103,6 +107,7 @@ COMMENT ON FUNCTION get_pricing_comparison IS 'Returns pricing comparison table 
 -- ============================================
 -- Returns one row per product with all supplier prices in JSONB
 -- Ready for immediate table display
+-- TODO: Remove it, we will not use it anymore
 CREATE OR REPLACE FUNCTION get_pricing_comparison_pivot(
     p_company_id UUID,
     p_supplier_ids UUID[] DEFAULT NULL,

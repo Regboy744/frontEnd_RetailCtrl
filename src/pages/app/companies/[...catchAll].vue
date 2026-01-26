@@ -1,7 +1,7 @@
 <template>
-  <div>
-    <ErrorPage></ErrorPage>
-  </div>
+ <div>
+  <ErrorPage></ErrorPage>
+ </div>
 </template>
 
 <script setup lang="ts">

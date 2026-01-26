@@ -1,19 +1,13 @@
-import { supabase, faker } from './util/config.js'
+import { supabase } from './util/config.js'
 
-const seedSuppliers = async (numSuppliers) => {
- const suppliers = []
-
- for (let index = 0; index < numSuppliers; index++) {
-  suppliers.push({
-   name: faker.company.name(),
-   contact_info: {
-    name: faker.person.firstName(),
-    email: faker.internet.email(),
-    phone: `+353 ${faker.helpers.arrayElement(['1', '21', '61', '91'])} ${faker.string.numeric(3)} ${faker.string.numeric(4)}`,
-   },
-   is_active: faker.datatype.boolean({ probability: 0.9 }),
-  })
- }
+const seedSuppliers = async () => {
+ const suppliers = [
+  { name: 'Musgrave Marketplace', contact_info: {}, is_active: true },
+  { name: 'Savage & Whitten', contact_info: {}, is_active: true },
+  { name: 'Barry Group', contact_info: {}, is_active: true },
+  { name: "O'Reillys Wholesale", contact_info: {}, is_active: true },
+  { name: 'Value Centre', contact_info: {}, is_active: true },
+ ]
 
  const { data, error } = await supabase.from('suppliers').insert(suppliers)
 
@@ -22,15 +16,12 @@ const seedSuppliers = async (numSuppliers) => {
   throw error
  }
 
- const activeCount = suppliers.filter((s) => s.is_active).length
- const inactiveCount = suppliers.length - activeCount
-
  console.log(
   'Successfully inserted suppliers:',
   data?.length || suppliers.length,
  )
- console.log(`- Active suppliers: ${activeCount}`)
- console.log(`- Inactive suppliers: ${inactiveCount}`)
+ console.log('Suppliers added:')
+ suppliers.forEach((s) => console.log(`  - ${s.name}`))
 }
 
-await seedSuppliers(12)
+await seedSuppliers()

@@ -2,15 +2,17 @@
 import type { SidebarProps } from '@/components/ui/sidebar'
 
 import {
- Settings2,
  Store,
  Euro,
  ReceiptText,
  Tags,
  Building2,
+ ShoppingCart,
+ Truck,
+ Package,
+ Users,
 } from 'lucide-vue-next'
-import NavMain from '@/components/app-layout/NavMain.vue'
-import NavMaster from '@/components/app-layout/NavMaster.vue'
+import NavFlat from '@/components/app-layout/NavFlat.vue'
 import NavUser from '@/components/app-layout/NavUser.vue'
 import TeamSwitcher from '@/components/app-layout/TeamSwitcher.vue'
 
@@ -50,111 +52,15 @@ const data = {
    number: '1074',
   },
  ],
- navMain: [
-  {
-   title: 'Big Deals',
-   to: '#',
-   icon: Tags,
-   isActive: true,
-   items: [
-    {
-     title: 'Home',
-     to: '/app',
-    },
-   ],
-  },
-  {
-   title: 'Price Check',
-   to: '#',
-   icon: Euro,
-   items: [
-    {
-     title: 'Savingbolos',
-     to: '#',
-    },
-   ],
-  },
-  {
-   title: 'Invoices',
-   to: '#',
-   icon: ReceiptText,
-   items: [
-    {
-     title: 'Extractor',
-     to: '#',
-    },
-   ],
-  },
-  {
-   title: 'Settings',
-   to: '#',
-   icon: Settings2,
-   items: [
-    {
-     title: 'General',
-     to: '#',
-    },
-    {
-     title: 'Team',
-     to: '#',
-    },
-    {
-     title: 'Billing',
-     to: '#',
-    },
-    {
-     title: 'Limits',
-     to: '#',
-    },
-   ],
-  },
- ],
- master: [
-  {
-   title: 'Companies',
-   to: '#',
-   icon: Building2,
-   isActive: true,
-   items: [
-    {
-     title: 'List',
-     to: '/app/companies',
-    },
-   ],
-  },
-  {
-   title: 'Price Check',
-   to: '#',
-   icon: Euro,
-   items: [
-    {
-     title: 'Savingbolos',
-     to: '#',
-    },
-   ],
-  },
-  {
-   title: 'Invoices',
-   to: '#',
-   icon: ReceiptText,
-   items: [
-    {
-     title: 'Extractor',
-     to: '#',
-    },
-   ],
-  },
-  {
-   title: 'Settings',
-   to: '#',
-   icon: Settings2,
-   items: [
-    {
-     title: 'User Profile',
-     to: '/app/users',
-    },
-   ],
-  },
+ navItems: [
+  { title: 'Big Deals', to: '/app', icon: Tags },
+  { title: 'Price Check', to: '/app/price-check', icon: Euro },
+  { title: 'Orders', to: '/app/orders', icon: ShoppingCart },
+  { title: 'Companies', to: '/app/companies', icon: Building2 },
+  { title: 'Suppliers', to: '/app/suppliers', icon: Truck },
+  { title: 'Master Products', to: '/app/masterProducts', icon: Package },
+  { title: 'Users', to: '/app/users', icon: Users },
+  { title: 'Invoices', to: '#', icon: ReceiptText },
  ],
 }
 </script>
@@ -165,8 +71,7 @@ const data = {
    <TeamSwitcher :stores="data.stores" />
   </SidebarHeader>
   <SidebarContent>
-   <NavMain :navMain="data.navMain" />
-   <NavMaster :navMaster="data.master" />
+   <NavFlat :items="data.navItems" />
   </SidebarContent>
   <SidebarFooter>
    <NavUser :user="data.user" />
