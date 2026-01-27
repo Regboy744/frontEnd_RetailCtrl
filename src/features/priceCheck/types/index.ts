@@ -29,6 +29,21 @@ export interface SupplierPrice {
  is_special_price?: boolean
  special_price_notes?: string | null
  valid_until?: string | null
+ supplier_product_code: string // Supplier's SKU (e.g., "60007" vs "60007/S" for different pack sizes)
+}
+
+// Threshold context - explains why a supplier price may or may not be recommended
+export interface ThresholdContext {
+ /** The supplier being evaluated */
+ supplier_id: string
+ /** The threshold percentage configured for this company+supplier (e.g., 6 = 6%) */
+ percentage: number
+ /** The maximum price the supplier can charge to "win" (meet threshold) */
+ required_price: number
+ /** How much cheaper the supplier actually is vs order (can be negative if more expensive) */
+ actual_difference_pct: number
+ /** Did the supplier beat the threshold? If false, order is recommended despite supplier being cheaper */
+ threshold_met: boolean
 }
 
 // Product comparison row
@@ -39,7 +54,7 @@ export interface ProductComparison {
  ean_code: string
  unit_size: string | null
  order: OrderItem
- prices: Record<string, SupplierPrice | null>
+ prices: Record<string, SupplierPrice[]> // Array to support multiple pack sizes per supplier;
  // Best price logic - order can now be best
  best_supplier_id: string | null // null when order is best
  best_supplier_price: number // best price among suppliers only
@@ -47,6 +62,8 @@ export interface ProductComparison {
  best_price_source: 'order' | 'supplier' // where best price comes from
  best_overall_price: number // the actual best price (order or supplier)
  potential_savings: number // positive = save by switching, negative = order already best
+ /** Threshold context - explains if supplier price meets the configured threshold */
+ threshold_context: ThresholdContext | null
 }
 
 // Product grouped by EAN (for variants/pack sizes)
@@ -84,6 +101,14 @@ export interface SupplierTotal {
  difference_vs_order: number
  /** Percentage difference vs comparable order value */
  percentage_difference: number
+ /** Cost from this supplier for ONLY the products where supplier is cheaper */
+ cheaper_products_supplier_cost: number
+ /** Order cost for the same products (baseline for comparison) */
+ cheaper_products_order_cost: number
+ /** Actual savings: (cheaper_products_order_cost - cheaper_products_supplier_cost) */
+ cheaper_products_savings: number
+ /** Savings percentage */
+ cheaper_products_savings_percentage: number
 }
 
 // Best supplier info
@@ -132,6 +157,10 @@ export interface ComparisonSummary {
  /** Recommendation: keep_order (order is best), switch_supplier (supplier beats order), mixed (varies by product) */
  recommendation: 'keep_order' | 'switch_supplier' | 'mixed'
  best_overall: BestOverall | null
+ /** Threshold percentages applied per supplier (supplier_id -> percentage) */
+ thresholds_applied: Record<string, number>
+ /** Number of products where supplier is cheaper but doesn't meet threshold */
+ products_below_threshold: number
 }
 
 // Comparison result

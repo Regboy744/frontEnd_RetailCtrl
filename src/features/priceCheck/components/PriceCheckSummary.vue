@@ -16,10 +16,9 @@ import {
  TrendingDown,
  Trophy,
  ArrowDown,
- ArrowUp,
- Minus,
  CheckCircle2,
  Scale,
+ ShieldAlert,
 } from 'lucide-vue-next'
 import type { ComparisonSummary, Supplier } from '@/features/priceCheck/types'
 
@@ -77,12 +76,35 @@ const isRecommendationMixed = computed(
 const isLocalOrder = (supplierId: string): boolean => {
  return supplierId === 'local_order'
 }
+
+// Get best supplier's cheaper products savings from supplier_totals
+const bestSupplierCheaperSavings = computed(() => {
+ // Try best_overall first, then fallback to best_supplier
+ const supplierId =
+  props.summary.best_overall?.supplier_id ||
+  props.summary.best_supplier?.supplier_id
+ if (!supplierId) return null
+ const supplierTotal = props.summary.supplier_totals.find(
+  (s) => s.supplier_id === supplierId,
+ )
+ if (!supplierTotal) return null
+ return {
+  savings: supplierTotal.cheaper_products_savings,
+  percentage: supplierTotal.cheaper_products_savings_percentage,
+ }
+})
+
+// Get threshold percentage for a supplier
+const getThresholdPercentage = (supplierId: string): number | null => {
+ if (!props.summary.thresholds_applied) return null
+ return props.summary.thresholds_applied[supplierId] ?? null
+}
 </script>
 
 <template>
  <div class="space-y-4">
   <!-- Stats Row - Compact horizontal layout -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
    <!-- Order Value -->
    <div class="bg-card border rounded-lg p-3">
     <div class="flex items-center gap-2 text-muted-foreground mb-1">
@@ -143,6 +165,24 @@ const isLocalOrder = (supplierId: string): boolean => {
      {{ formatCurrency(summary.max_potential_savings ?? 0) }}
     </p>
    </div>
+
+   <!-- Below Threshold -->
+   <div class="bg-card border rounded-lg p-3">
+    <div class="flex items-center gap-2 text-muted-foreground mb-1">
+     <ShieldAlert class="h-3.5 w-3.5" />
+     <span class="text-xs font-medium">Below Threshold</span>
+    </div>
+    <p
+     :class="[
+      'text-lg font-bold',
+      summary.products_below_threshold > 0
+       ? 'text-amber-500'
+       : 'text-muted-foreground',
+     ]"
+    >
+     {{ summary.products_below_threshold ?? 0 }}
+    </p>
+   </div>
   </div>
 
   <!-- Recommendation Banner -->
@@ -167,9 +207,17 @@ const isLocalOrder = (supplierId: string): boolean => {
      <p class="font-bold text-lg">
       {{ formatCurrency(summary.best_overall.total_cost) }}
      </p>
-     <p class="text-xs text-green-600 font-medium">
-      Save {{ formatCurrency(summary.best_overall.savings_vs_order) }}
+     <p
+      v-if="
+       bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0
+      "
+      class="text-xs text-green-600 font-medium"
+     >
+      Save {{ formatCurrency(bestSupplierCheaperSavings.savings) }} ({{
+       formatPercentage(bestSupplierCheaperSavings.percentage)
+      }})
      </p>
+     <p v-else class="text-xs text-muted-foreground">No savings</p>
     </div>
    </div>
    <!-- Breakdown -->
@@ -235,8 +283,15 @@ const isLocalOrder = (supplierId: string): boolean => {
     <div v-if="summary.best_overall.source === 'supplier'" class="text-right">
      <p class="text-xs text-muted-foreground">Best supplier</p>
      <p class="font-semibold">{{ summary.best_overall.supplier_name }}</p>
-     <p class="text-xs text-green-600 font-medium">
-      {{ formatCurrency(summary.best_overall.total_cost) }}
+     <p
+      v-if="
+       bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0
+      "
+      class="text-xs text-green-600 font-medium"
+     >
+      Save {{ formatCurrency(bestSupplierCheaperSavings.savings) }} ({{
+       formatPercentage(bestSupplierCheaperSavings.percentage)
+      }})
      </p>
     </div>
    </div>
@@ -257,12 +312,12 @@ const isLocalOrder = (supplierId: string): boolean => {
      order wins
     </span>
     <span
-     v-if="summary.max_potential_savings && summary.max_potential_savings > 0"
+     v-if="bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0"
      class="ml-auto"
     >
-     Max savings:
+     Potential savings:
      <span class="font-medium text-green-600">
-      {{ formatCurrency(summary.max_potential_savings) }}
+      {{ formatCurrency(bestSupplierCheaperSavings.savings) }}
      </span>
     </span>
    </div>
@@ -286,9 +341,15 @@ const isLocalOrder = (supplierId: string): boolean => {
     <p class="font-bold text-lg">
      {{ formatCurrency(summary.best_supplier.total_cost) }}
     </p>
-    <p class="text-xs text-green-600 font-medium">
-     Save {{ formatCurrency(summary.best_supplier.savings_vs_order) }}
+    <p
+     v-if="bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0"
+     class="text-xs text-green-600 font-medium"
+    >
+     Save {{ formatCurrency(bestSupplierCheaperSavings.savings) }} ({{
+      formatPercentage(bestSupplierCheaperSavings.percentage)
+     }})
     </p>
+    <p v-else class="text-xs text-muted-foreground">No savings</p>
    </div>
   </div>
 
@@ -299,9 +360,11 @@ const isLocalOrder = (supplierId: string): boolean => {
      <TableRow class="bg-muted/50">
       <TableHead class="w-12 text-center">#</TableHead>
       <TableHead>Source</TableHead>
-      <TableHead class="text-center">Products</TableHead>
-      <TableHead class="text-right">Total</TableHead>
-      <TableHead class="text-right">vs Order</TableHead>
+      <TableHead class="text-center">Threshold %</TableHead>
+      <TableHead class="text-center">Cheaper Products</TableHead>
+      <TableHead class="text-right">Order Cost</TableHead>
+      <TableHead class="text-right">Supplier Cost</TableHead>
+      <TableHead class="text-right">Savings</TableHead>
      </TableRow>
     </TableHeader>
     <TableBody>
@@ -363,20 +426,40 @@ const isLocalOrder = (supplierId: string): boolean => {
        </div>
       </TableCell>
 
-      <!-- Products Available -->
+      <!-- Threshold % -->
+      <TableCell class="text-center">
+       <span
+        v-if="
+         !isLocalOrder(supplierTotal.supplier_id) &&
+         getThresholdPercentage(supplierTotal.supplier_id) !== null
+        "
+        class="text-sm font-medium"
+       >
+        {{ getThresholdPercentage(supplierTotal.supplier_id) }}%
+       </span>
+       <span v-else class="text-muted-foreground text-sm">—</span>
+      </TableCell>
+
+      <!-- Cheaper Products -->
       <TableCell class="text-center">
        <span class="text-sm">
-        {{ supplierTotal.products_available }}
-       </span>
-       <span
-        v-if="supplierTotal.products_unavailable > 0"
-        class="text-xs text-amber-500 ml-1"
-       >
-        ({{ supplierTotal.products_unavailable }} N/A)
+        {{ supplierTotal.products_cheaper }}
        </span>
       </TableCell>
 
-      <!-- Total Cost -->
+      <!-- Order Cost (baseline) -->
+      <TableCell class="text-right">
+       <span
+        :class="[
+         'font-semibold',
+         isLocalOrder(supplierTotal.supplier_id) ? 'text-blue-600' : '',
+        ]"
+       >
+        {{ formatCurrency(supplierTotal.cheaper_products_order_cost) }}
+       </span>
+      </TableCell>
+
+      <!-- Supplier Cost -->
       <TableCell class="text-right">
        <span
         :class="[
@@ -388,38 +471,32 @@ const isLocalOrder = (supplierId: string): boolean => {
             : '',
         ]"
        >
-        {{ formatCurrency(supplierTotal.total_cost) }}
+        {{ formatCurrency(supplierTotal.cheaper_products_supplier_cost) }}
        </span>
       </TableCell>
 
-      <!-- Difference vs Order -->
+      <!-- Savings (Order Cost - Supplier Cost) -->
       <TableCell class="text-right">
        <div class="flex items-center justify-end gap-1">
         <!-- Local order is always the baseline (no difference) -->
         <template v-if="isLocalOrder(supplierTotal.supplier_id)">
          <span class="text-blue-500 text-sm font-medium">Baseline</span>
         </template>
-        <template v-else-if="supplierTotal.difference_vs_order < 0">
+        <!-- Supplier has cheaper products - show savings -->
+        <template v-else-if="supplierTotal.cheaper_products_savings > 0">
          <ArrowDown class="h-3 w-3 text-green-500" />
          <span class="text-green-500 text-sm font-medium">
-          {{ formatCurrency(Math.abs(supplierTotal.difference_vs_order)) }}
+          {{ formatCurrency(supplierTotal.cheaper_products_savings) }}
          </span>
          <span class="text-green-500/70 text-xs">
-          ({{ formatPercentage(supplierTotal.percentage_difference) }})
+          ({{
+           formatPercentage(supplierTotal.cheaper_products_savings_percentage)
+          }})
          </span>
         </template>
-        <template v-else-if="supplierTotal.difference_vs_order > 0">
-         <ArrowUp class="h-3 w-3 text-red-500" />
-         <span class="text-red-500 text-sm font-medium">
-          {{ formatCurrency(supplierTotal.difference_vs_order) }}
-         </span>
-         <span class="text-red-500/70 text-xs">
-          (+{{ formatPercentage(supplierTotal.percentage_difference) }})
-         </span>
-        </template>
+        <!-- Supplier has no cheaper products -->
         <template v-else>
-         <Minus class="h-3 w-3 text-muted-foreground" />
-         <span class="text-muted-foreground text-sm">Same</span>
+         <span class="text-muted-foreground text-sm">No savings</span>
         </template>
        </div>
       </TableCell>

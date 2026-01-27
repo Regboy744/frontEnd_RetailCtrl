@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
  Table,
  TableBody,
@@ -8,29 +10,30 @@ import {
  TableHeader,
  TableRow,
 } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import {
  Tooltip,
  TooltipContent,
  TooltipProvider,
  TooltipTrigger,
 } from '@/components/ui/tooltip'
-import {
- ChevronRight,
- Check,
- Minus,
- Search,
- ArrowUpDown,
- CornerDownRight,
- Info,
-} from 'lucide-vue-next'
 import type {
- Supplier,
  ProductComparison,
  ProductGroup,
+ Supplier,
+ SupplierPrice,
 } from '@/features/priceCheck/types'
+import {
+ ArrowUpDown,
+ Check,
+ CheckCircle2,
+ ChevronRight,
+ CornerDownRight,
+ Info,
+ Minus,
+ Search,
+ XCircle,
+} from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 
 interface Props {
  suppliers: Supplier[]
@@ -150,8 +153,12 @@ const filteredGroups = computed(() => {
      // Supplier column
      if (sortColumn.value?.startsWith('supplier_')) {
       const supplierId = sortColumn.value.replace('supplier_', '')
-      aVal = a.primary.prices[supplierId]?.unit_price ?? Infinity
-      bVal = b.primary.prices[supplierId]?.unit_price ?? Infinity
+      const aPrices = a.primary.prices[supplierId]
+      const bPrices = b.primary.prices[supplierId]
+      const aFirstPrice = aPrices?.[0]
+      const bFirstPrice = bPrices?.[0]
+      aVal = aFirstPrice?.unit_price ?? Number.POSITIVE_INFINITY
+      bVal = bFirstPrice?.unit_price ?? Number.POSITIVE_INFINITY
      }
    }
 
@@ -205,9 +212,31 @@ const toggleSort = (column: string) => {
  }
 }
 
-// Get supplier price display
-const getSupplierPrice = (product: ProductComparison, supplierId: string) => {
- return product.prices[supplierId]
+// Get supplier price display - returns primary (first/most expensive) price
+const getSupplierPrice = (
+ product: ProductComparison,
+ supplierId: string,
+): SupplierPrice | null => {
+ const prices = product.prices[supplierId]
+ const firstPrice = prices?.[0]
+ return firstPrice ?? null
+}
+
+// Get all supplier prices for a product (for showing multiple pack sizes)
+const getAllSupplierPrices = (
+ product: ProductComparison,
+ supplierId: string,
+): SupplierPrice[] => {
+ return product.prices[supplierId] ?? []
+}
+
+// Check if a supplier has multiple pack sizes for a product
+const hasMultiplePrices = (
+ product: ProductComparison,
+ supplierId: string,
+): boolean => {
+ const prices = product.prices[supplierId]
+ return !!prices && prices.length > 1
 }
 
 // Get best supplier name
@@ -215,6 +244,35 @@ const getBestSupplierName = (product: ProductComparison): string => {
  if (product.order_is_best) return 'Order'
  const supplier = props.suppliers.find((s) => s.id === product.best_supplier_id)
  return supplier?.name ?? '-'
+}
+
+// Check if supplier price should be muted (cheaper but below threshold)
+const isBelowThreshold = (
+ product: ProductComparison,
+ supplierId: string,
+): boolean => {
+ const price = getSupplierPrice(product, supplierId)
+ if (!price || !product.threshold_context) return false
+ // Mute if: this supplier is in threshold_context, price is cheaper, but threshold not met
+ return (
+  product.threshold_context.supplier_id === supplierId &&
+  price.difference_vs_order < 0 &&
+  !product.threshold_context.threshold_met
+ )
+}
+
+// Get threshold supplier name for display
+const getThresholdSupplierName = (product: ProductComparison): string => {
+ if (!product.threshold_context) return '-'
+ const supplier = props.suppliers.find(
+  (s) => s.id === product.threshold_context?.supplier_id,
+ )
+ return supplier?.name ?? '-'
+}
+
+// Format percentage for threshold display
+const formatThresholdPercentage = (value: number): string => {
+ return `${value.toFixed(2)}%`
 }
 
 // Total products count (including variants)
@@ -351,6 +409,11 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
           <ArrowUpDown class="ml-1 h-3 w-3" />
          </Button>
         </TableHead>
+
+        <!-- Threshold -->
+        <TableHead class="whitespace-nowrap text-center">
+         <span class="font-semibold text-xs">Threshold</span>
+        </TableHead>
        </TableRow>
       </TableHeader>
 
@@ -457,16 +520,21 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
               'py-0.5 px-1 -mx-1 rounded',
               isBestSupplierPrice(group.primary, supplier.id)
                ? 'bg-green-500/10'
-               : '',
+               : isBelowThreshold(group.primary, supplier.id)
+                 ? 'opacity-50'
+                 : '',
              ]"
             >
+             <!-- Primary Price (first/most expensive) -->
              <div class="flex items-center justify-center gap-0.5">
               <span
                :class="[
                 'text-xs font-medium tabular-nums',
                 isBestSupplierPrice(group.primary, supplier.id)
                  ? 'text-green-600'
-                 : '',
+                 : isBelowThreshold(group.primary, supplier.id)
+                   ? 'text-muted-foreground'
+                   : '',
                ]"
               >
                {{
@@ -480,6 +548,19 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
                class="h-3 w-3 text-green-500 shrink-0"
               />
              </div>
+             <!-- SKU Code for primary price -->
+             <div
+              v-if="
+               getSupplierPrice(group.primary, supplier.id)
+                ?.supplier_product_code
+              "
+              class="text-[9px] text-muted-foreground/70 font-mono"
+             >
+              {{
+               getSupplierPrice(group.primary, supplier.id)!
+                .supplier_product_code
+              }}
+             </div>
              <div
               v-if="
                getSupplierPrice(group.primary, supplier.id)!
@@ -487,10 +568,12 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
               "
               :class="[
                'text-[10px] tabular-nums',
-               getDifferenceClass(
-                getSupplierPrice(group.primary, supplier.id)!
-                 .difference_vs_order,
-               ),
+               isBelowThreshold(group.primary, supplier.id)
+                ? 'text-amber-500'
+                : getDifferenceClass(
+                   getSupplierPrice(group.primary, supplier.id)!
+                    .difference_vs_order,
+                  ),
               ]"
              >
               {{
@@ -551,6 +634,36 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
                </p>
               </TooltipContent>
              </Tooltip>
+             <!-- Additional Pack Size Variants -->
+             <Tooltip v-if="hasMultiplePrices(group.primary, supplier.id)">
+              <TooltipTrigger as-child>
+               <Badge
+                variant="outline"
+                class="text-[9px] px-1 py-0 h-3.5 mt-0.5 cursor-help border-dashed"
+               >
+                +{{
+                 getAllSupplierPrices(group.primary, supplier.id).length - 1
+                }}
+                more
+               </Badge>
+              </TooltipTrigger>
+              <TooltipContent class="max-w-[200px]">
+               <p class="font-medium text-xs mb-1">Other pack sizes:</p>
+               <div
+                v-for="(altPrice, idx) in getAllSupplierPrices(
+                 group.primary,
+                 supplier.id,
+                ).slice(1)"
+                :key="idx"
+                class="text-xs flex justify-between gap-2"
+               >
+                <span class="font-mono text-muted-foreground">{{
+                 altPrice.supplier_product_code
+                }}</span>
+                <span>{{ formatCurrency(altPrice.unit_price) }}</span>
+               </div>
+              </TooltipContent>
+             </Tooltip>
             </div>
            </template>
            <template v-else>
@@ -586,6 +699,73 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
             Save
             {{ formatCurrency(group.primary.potential_savings) }}
            </div>
+          </TableCell>
+
+          <!-- Threshold -->
+          <TableCell class="py-2 text-center">
+           <template v-if="group.primary.threshold_context">
+            <Tooltip>
+             <TooltipTrigger as-child>
+              <div class="inline-flex items-center justify-center cursor-help">
+               <CheckCircle2
+                v-if="group.primary.threshold_context.threshold_met"
+                class="h-4 w-4 text-green-500"
+               />
+               <XCircle v-else class="h-4 w-4 text-red-400" />
+              </div>
+             </TooltipTrigger>
+             <TooltipContent class="max-w-[220px]">
+              <div class="space-y-1 text-xs">
+               <p class="font-medium">
+                {{ getThresholdSupplierName(group.primary) }}
+               </p>
+               <div class="flex justify-between gap-4">
+                <span class="text-muted-foreground">Threshold:</span>
+                <span>{{ group.primary.threshold_context.percentage }}%</span>
+               </div>
+               <div class="flex justify-between gap-4">
+                <span class="text-muted-foreground">Required price:</span>
+                <span>{{
+                 formatCurrency(group.primary.threshold_context.required_price)
+                }}</span>
+               </div>
+               <div class="flex justify-between gap-4">
+                <span class="text-muted-foreground">Actual difference:</span>
+                <span
+                 :class="
+                  group.primary.threshold_context.actual_difference_pct > 0
+                   ? 'text-green-500'
+                   : 'text-red-400'
+                 "
+                >
+                 {{
+                  formatThresholdPercentage(
+                   group.primary.threshold_context.actual_difference_pct,
+                  )
+                 }}
+                </span>
+               </div>
+               <p
+                :class="[
+                 'font-medium pt-1 border-t',
+                 group.primary.threshold_context.threshold_met
+                  ? 'text-green-500'
+                  : 'text-red-400',
+                ]"
+               >
+                {{
+                 group.primary.threshold_context.threshold_met
+                  ? 'Threshold met - recommend switching'
+                  : 'Below threshold - keep order'
+                }}
+               </p>
+              </div>
+             </TooltipContent>
+            </Tooltip>
+           </template>
+           <template v-else>
+            <Minus class="h-3 w-3 mx-auto text-muted-foreground/50" />
+           </template>
           </TableCell>
          </TableRow>
 
@@ -670,7 +850,9 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
                'py-0.5 px-1 -mx-1 rounded',
                isBestSupplierPrice(variant, supplier.id)
                 ? 'bg-green-500/10'
-                : '',
+                : isBelowThreshold(variant, supplier.id)
+                  ? 'opacity-50'
+                  : '',
               ]"
              >
               <div class="flex items-center justify-center gap-0.5">
@@ -693,6 +875,17 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
                 class="h-3 w-3 text-green-500 shrink-0"
                />
               </div>
+              <!-- SKU Code for variant price -->
+              <div
+               v-if="
+                getSupplierPrice(variant, supplier.id)?.supplier_product_code
+               "
+               class="text-[9px] text-muted-foreground/70 font-mono"
+              >
+               {{
+                getSupplierPrice(variant, supplier.id)!.supplier_product_code
+               }}
+              </div>
               <div
                v-if="
                 getSupplierPrice(variant, supplier.id)!.difference_vs_order !==
@@ -700,9 +893,11 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
                "
                :class="[
                 'text-[10px] tabular-nums',
-                getDifferenceClass(
-                 getSupplierPrice(variant, supplier.id)!.difference_vs_order,
-                ),
+                isBelowThreshold(variant, supplier.id)
+                 ? 'text-amber-500'
+                 : getDifferenceClass(
+                    getSupplierPrice(variant, supplier.id)!.difference_vs_order,
+                   ),
                ]"
               >
                {{
@@ -720,6 +915,34 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
               >
                Special
               </Badge>
+              <!-- Additional Pack Size Variants for expanded row -->
+              <Tooltip v-if="hasMultiplePrices(variant, supplier.id)">
+               <TooltipTrigger as-child>
+                <Badge
+                 variant="outline"
+                 class="text-[9px] px-1 py-0 h-3.5 mt-0.5 cursor-help border-dashed"
+                >
+                 +{{ getAllSupplierPrices(variant, supplier.id).length - 1 }}
+                 more
+                </Badge>
+               </TooltipTrigger>
+               <TooltipContent class="max-w-[200px]">
+                <p class="font-medium text-xs mb-1">Other pack sizes:</p>
+                <div
+                 v-for="(altPrice, idx) in getAllSupplierPrices(
+                  variant,
+                  supplier.id,
+                 ).slice(1)"
+                 :key="idx"
+                 class="text-xs flex justify-between gap-2"
+                >
+                 <span class="font-mono text-muted-foreground">{{
+                  altPrice.supplier_product_code
+                 }}</span>
+                 <span>{{ formatCurrency(altPrice.unit_price) }}</span>
+                </div>
+               </TooltipContent>
+              </Tooltip>
              </div>
             </template>
             <template v-else>
@@ -752,6 +975,73 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
              Save {{ formatCurrency(variant.potential_savings) }}
             </div>
            </TableCell>
+
+           <!-- Threshold -->
+           <TableCell class="py-2 text-center">
+            <template v-if="variant.threshold_context">
+             <Tooltip>
+              <TooltipTrigger as-child>
+               <div class="inline-flex items-center justify-center cursor-help">
+                <CheckCircle2
+                 v-if="variant.threshold_context.threshold_met"
+                 class="h-4 w-4 text-green-500/70"
+                />
+                <XCircle v-else class="h-4 w-4 text-red-400/70" />
+               </div>
+              </TooltipTrigger>
+              <TooltipContent class="max-w-[220px]">
+               <div class="space-y-1 text-xs">
+                <p class="font-medium">
+                 {{ getThresholdSupplierName(variant) }}
+                </p>
+                <div class="flex justify-between gap-4">
+                 <span class="text-muted-foreground">Threshold:</span>
+                 <span>{{ variant.threshold_context.percentage }}%</span>
+                </div>
+                <div class="flex justify-between gap-4">
+                 <span class="text-muted-foreground">Required price:</span>
+                 <span>{{
+                  formatCurrency(variant.threshold_context.required_price)
+                 }}</span>
+                </div>
+                <div class="flex justify-between gap-4">
+                 <span class="text-muted-foreground">Actual difference:</span>
+                 <span
+                  :class="
+                   variant.threshold_context.actual_difference_pct > 0
+                    ? 'text-green-500'
+                    : 'text-red-400'
+                  "
+                 >
+                  {{
+                   formatThresholdPercentage(
+                    variant.threshold_context.actual_difference_pct,
+                   )
+                  }}
+                 </span>
+                </div>
+                <p
+                 :class="[
+                  'font-medium pt-1 border-t',
+                  variant.threshold_context.threshold_met
+                   ? 'text-green-500'
+                   : 'text-red-400',
+                 ]"
+                >
+                 {{
+                  variant.threshold_context.threshold_met
+                   ? 'Threshold met - recommend switching'
+                   : 'Below threshold - keep order'
+                 }}
+                </p>
+               </div>
+              </TooltipContent>
+             </Tooltip>
+            </template>
+            <template v-else>
+             <Minus class="h-3 w-3 mx-auto text-muted-foreground/50" />
+            </template>
+           </TableCell>
           </TableRow>
          </template>
         </template>
@@ -760,7 +1050,7 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
        <template v-else>
         <TableRow>
          <TableCell
-          :colspan="8 + suppliers.length"
+          :colspan="9 + suppliers.length"
           class="h-20 text-center text-sm text-muted-foreground"
          >
           No products found.
@@ -810,6 +1100,18 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
       N sizes
      </Badge>
      <span>Multiple pack sizes</span>
+    </div>
+    <div class="flex items-center gap-1">
+     <CheckCircle2 class="h-3.5 w-3.5 text-green-500" />
+     <span>Meets threshold</span>
+    </div>
+    <div class="flex items-center gap-1">
+     <XCircle class="h-3.5 w-3.5 text-red-400" />
+     <span>Below threshold</span>
+    </div>
+    <div class="flex items-center gap-1">
+     <span class="text-amber-500 font-medium opacity-50">-€X</span>
+     <span>Cheaper but below threshold</span>
     </div>
    </div>
   </div>

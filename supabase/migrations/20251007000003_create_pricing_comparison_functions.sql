@@ -63,6 +63,7 @@ RETURNS TABLE (
     special_price_notes TEXT,
     valid_until TIMESTAMPTZ,
     availability_status TEXT
+    supplier_product_code TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -81,6 +82,7 @@ BEGIN
         scp.notes,
         scp.valid_until,
         sp.availability_status
+        sp.supplier_product_code
     FROM master_products mp
     JOIN supplier_products sp ON sp.master_product_id = mp.id
     JOIN suppliers s ON s.id = sp.supplier_id

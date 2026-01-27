@@ -63,7 +63,7 @@
    <!-- Hero Section -->
    <section
     id="hero"
-    class="relative min-h-screen flex items-center pt-16 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50"
+    class="relative min-h-screen flex items-center pt-16 overflow-hidden bg-linear-to-br from-slate-50 via-white to-blue-50"
    >
     <!-- Subtle geometric pattern -->
     <div class="absolute inset-0 bg-grid-pattern opacity-40"></div>
@@ -91,7 +91,7 @@
       >
        Take Control of Your
        <span
-        class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500"
+        class="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-teal-500"
        >
         Retail Operations
        </span>
@@ -225,7 +225,7 @@
        <Card
         v-for="feature in platformFeatures"
         :key="feature.title"
-        class="border-slate-200 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300 group"
+        class="border-slate-200 bg-linear-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300 group"
        >
         <CardContent class="p-6">
          <div
@@ -260,7 +260,7 @@
        <Card
         v-for="service in consultingServices"
         :key="service.title"
-        class="border-slate-200 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300 group"
+        class="border-slate-200 bg-linear-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300 group"
        >
         <CardContent class="p-6">
          <div
@@ -314,7 +314,7 @@
        <!-- Connector line -->
        <div
         v-if="index < steps.length - 1"
-        class="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-blue-600 to-teal-400"
+        class="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-linear-to-r from-blue-600 to-teal-400"
        ></div>
       </div>
      </div>
@@ -404,7 +404,7 @@
    </section>
 
    <!-- CTA Section -->
-   <section id="cta" class="py-24 bg-gradient-to-br from-blue-600 to-blue-700">
+   <section id="cta" class="py-24 bg-linear-to-br from-blue-600 to-blue-700">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
      <div class="max-w-3xl mx-auto text-center">
       <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
