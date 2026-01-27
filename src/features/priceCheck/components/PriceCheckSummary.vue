@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
  Table,
  TableBody,
@@ -19,15 +20,55 @@ import {
  CheckCircle2,
  Scale,
  ShieldAlert,
+ Eye,
 } from 'lucide-vue-next'
-import type { ComparisonSummary, Supplier } from '@/features/priceCheck/types'
+import type {
+ ComparisonSummary,
+ Supplier,
+ SupplierTotal,
+ ProductComparison,
+} from '@/features/priceCheck/types'
+import SupplierProductsSheet from './SupplierProductsSheet.vue'
 
 interface Props {
  summary: ComparisonSummary
  suppliers: Supplier[]
+ products: ProductComparison[]
 }
 
 const props = defineProps<Props>()
+
+// Sheet state
+const sheetOpen = ref(false)
+const selectedSupplierTotal = ref<SupplierTotal | null>(null)
+
+// Open the products sheet for a specific supplier
+const openProductsSheet = (supplierTotal: SupplierTotal) => {
+ selectedSupplierTotal.value = supplierTotal
+ sheetOpen.value = true
+}
+
+// Filter products for the selected supplier
+const filteredProducts = computed(() => {
+ if (!selectedSupplierTotal.value) return []
+
+ const supplierId = selectedSupplierTotal.value.supplier_id
+
+ // For Local Order: show products where order is best
+ if (supplierId === 'local_order') {
+  return props.products.filter((p) => p.order_is_best)
+ }
+
+ // For suppliers: show products where this supplier is THE best (exclusive win)
+ return props.products.filter(
+  (p) => !p.order_is_best && p.best_supplier_id === supplierId,
+ )
+})
+
+// Check if selected supplier is Local Order
+const isSelectedLocalOrder = computed(() => {
+ return selectedSupplierTotal.value?.supplier_id === 'local_order'
+})
 
 // Format currency
 const formatCurrency = (amount: number): string => {
@@ -98,6 +139,75 @@ const bestSupplierCheaperSavings = computed(() => {
 const getThresholdPercentage = (supplierId: string): number | null => {
  if (!props.summary.thresholds_applied) return null
  return props.summary.thresholds_applied[supplierId] ?? null
+}
+// Unified Recommendation Configuration
+const recommendationState = computed(() => {
+ const bestSupplier = props.summary.best_overall || props.summary.best_supplier
+ const savings = bestSupplierCheaperSavings.value
+
+ // 1. Keep Order (Blue)
+ if (isRecommendationOrder.value) {
+  return {
+   theme: 'blue',
+   icon: CheckCircle2,
+   title: 'Best Price: Current Order',
+   subtitle: `Your current order offers the best value. No savings found.`,
+   metricLabel: 'Total Cost',
+   metricValue: props.summary.total_order_value, // Current order value
+   savings: null,
+  }
+ }
+
+ // 2. Switch Supplier (Green)
+ if (isRecommendationSupplier.value && bestSupplier) {
+  return {
+   theme: 'green',
+   icon: Trophy,
+   title: `Best Price: ${bestSupplier.supplier_name}`,
+   subtitle: `${props.summary.products_supplier_is_best} products are cheaper with this supplier.`,
+   metricLabel: 'Total Cost',
+   metricValue: bestSupplier.total_cost,
+   savings: savings,
+  }
+ }
+
+ // 3. Mixed Results (Amber)
+ if (isRecommendationMixed.value && bestSupplier) {
+  return {
+   theme: 'amber',
+   icon: Scale,
+   title: 'Mixed Results',
+   subtitle: `${props.summary.products_supplier_is_best} items cheaper at ${bestSupplier.supplier_name}, ${props.summary.products_order_is_best} items best at current order.`,
+   metricLabel: 'Potential Lowest',
+   metricValue: bestSupplier.total_cost, // Or max_potential_savings calculation logic
+   savings: savings,
+  }
+ }
+
+ // Fallback (Green)
+ if (bestSupplier) {
+  return {
+   theme: 'green',
+   icon: Trophy,
+   title: `Best Price: ${bestSupplier.supplier_name}`,
+   subtitle: 'Lowest total cost option.',
+   metricLabel: 'Total Cost',
+   metricValue: bestSupplier.total_cost,
+   savings: savings,
+  }
+ }
+
+ return null
+})
+
+// Helper for dynamic classes based on theme
+const themeClasses = (theme: string) => {
+ const themes: Record<string, string> = {
+  green: 'bg-green-500/10 border-green-500/30 text-green-700',
+  blue: 'bg-blue-500/10 border-blue-500/30 text-blue-700',
+  amber: 'bg-amber-500/10 border-amber-500/30 text-amber-700',
+ }
+ return themes[theme] || themes.green
 }
 </script>
 
@@ -185,171 +295,62 @@ const getThresholdPercentage = (supplierId: string): number | null => {
    </div>
   </div>
 
-  <!-- Recommendation Banner -->
-  <!-- Supplier is Best -->
+  <!-- Unified Recommendation Banner -->
   <div
-   v-if="isRecommendationSupplier && summary.best_overall"
-   class="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3"
+   v-if="recommendationState"
+   :class="[
+    'flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-lg border px-4 py-3',
+    themeClasses(recommendationState.theme),
+   ]"
   >
-   <div class="flex items-center justify-between">
-    <div class="flex items-center gap-3">
-     <div class="p-1.5 bg-green-500/20 rounded-full">
-      <Trophy class="h-4 w-4 text-green-500" />
-     </div>
-     <div>
-      <p class="text-xs text-muted-foreground">Best Supplier</p>
-      <p class="font-semibold">
-       {{ summary.best_overall.supplier_name }}
-      </p>
-     </div>
-    </div>
-    <div class="text-right">
-     <p class="font-bold text-lg">
-      {{ formatCurrency(summary.best_overall.total_cost) }}
-     </p>
-     <p
-      v-if="
-       bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0
-      "
-      class="text-xs text-green-600 font-medium"
-     >
-      Save {{ formatCurrency(bestSupplierCheaperSavings.savings) }} ({{
-       formatPercentage(bestSupplierCheaperSavings.percentage)
-      }})
-     </p>
-     <p v-else class="text-xs text-muted-foreground">No savings</p>
-    </div>
-   </div>
-   <!-- Breakdown -->
-   <div
-    class="mt-3 pt-3 border-t border-green-500/20 flex items-center gap-4 text-xs text-muted-foreground"
-   >
-    <span v-if="summary.products_supplier_is_best > 0">
-     <span class="font-medium text-green-600">
-      {{ summary.products_supplier_is_best }}
-     </span>
-     product{{ summary.products_supplier_is_best !== 1 ? 's' : '' }} can save
-    </span>
-    <span v-if="summary.products_order_is_best > 0">
-     <span class="font-medium">{{ summary.products_order_is_best }}</span>
-     product{{ summary.products_order_is_best !== 1 ? 's' : '' }} order is best
-    </span>
-   </div>
-  </div>
-
-  <!-- Order is Best (all products) -->
-  <div
-   v-else-if="isRecommendationOrder"
-   class="bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-3"
-  >
-   <div class="flex items-center gap-3">
-    <div class="p-1.5 bg-blue-500/20 rounded-full">
-     <CheckCircle2 class="h-4 w-4 text-blue-500" />
-    </div>
-    <div>
-     <p class="font-semibold text-blue-600">Your order has the best prices</p>
-     <p class="text-xs text-muted-foreground">
-      No savings available by switching suppliers
-     </p>
-    </div>
-   </div>
-   <div
-    class="mt-3 pt-3 border-t border-blue-500/20 text-xs text-muted-foreground"
-   >
-    All
-    <span class="font-medium">{{ summary.products_order_is_best }}</span>
-    product{{ summary.products_order_is_best !== 1 ? 's' : '' }} are best at
-    current order prices
-   </div>
-  </div>
-
-  <!-- Mixed Results -->
-  <div
-   v-else-if="isRecommendationMixed && summary.best_overall"
-   class="bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-3"
-  >
-   <div class="flex items-center justify-between">
-    <div class="flex items-center gap-3">
-     <div class="p-1.5 bg-amber-500/20 rounded-full">
-      <Scale class="h-4 w-4 text-amber-500" />
-     </div>
-     <div>
-      <p class="font-semibold text-amber-600">Mixed Results</p>
-      <p class="text-xs text-muted-foreground">
-       Some products cheaper at supplier, some at current order
-      </p>
-     </div>
-    </div>
-    <div v-if="summary.best_overall.source === 'supplier'" class="text-right">
-     <p class="text-xs text-muted-foreground">Best supplier</p>
-     <p class="font-semibold">{{ summary.best_overall.supplier_name }}</p>
-     <p
-      v-if="
-       bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0
-      "
-      class="text-xs text-green-600 font-medium"
-     >
-      Save {{ formatCurrency(bestSupplierCheaperSavings.savings) }} ({{
-       formatPercentage(bestSupplierCheaperSavings.percentage)
-      }})
-     </p>
-    </div>
-   </div>
-   <!-- Breakdown -->
-   <div
-    class="mt-3 pt-3 border-t border-amber-500/20 flex items-center gap-4 text-xs text-muted-foreground"
-   >
-    <span v-if="summary.products_supplier_is_best > 0">
-     <span class="font-medium text-green-600">
-      {{ summary.products_supplier_is_best }}
-     </span>
-     supplier wins
-    </span>
-    <span v-if="summary.products_order_is_best > 0">
-     <span class="font-medium text-blue-600">
-      {{ summary.products_order_is_best }}
-     </span>
-     order wins
-    </span>
-    <span
-     v-if="bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0"
-     class="ml-auto"
+   <!-- Left: Icon & Main Info -->
+   <div class="flex items-start md:items-center gap-3">
+    <div
+     :class="[
+      'p-2 rounded-full shrink-0',
+      `bg-${recommendationState.theme}-500/20 text-${recommendationState.theme}-600`,
+     ]"
     >
-     Potential savings:
-     <span class="font-medium text-green-600">
-      {{ formatCurrency(bestSupplierCheaperSavings.savings) }}
-     </span>
-    </span>
-   </div>
-  </div>
+     <component :is="recommendationState.icon" class="h-5 w-5" />
+    </div>
 
-  <!-- Fallback: Original best supplier banner (for backwards compatibility) -->
-  <div
-   v-else-if="summary.best_supplier"
-   class="flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3"
-  >
-   <div class="flex items-center gap-3">
-    <div class="p-1.5 bg-green-500/20 rounded-full">
-     <Trophy class="h-4 w-4 text-green-500" />
-    </div>
     <div>
-     <p class="text-xs text-muted-foreground">Best Supplier</p>
-     <p class="font-semibold">{{ summary.best_supplier.supplier_name }}</p>
+     <h3 class="font-bold text-base leading-none mb-1">
+      {{ recommendationState.title }}
+     </h3>
+     <p class="text-sm opacity-80 font-medium">
+      {{ recommendationState.subtitle }}
+     </p>
     </div>
    </div>
-   <div class="text-right">
-    <p class="font-bold text-lg">
-     {{ formatCurrency(summary.best_supplier.total_cost) }}
-    </p>
-    <p
-     v-if="bestSupplierCheaperSavings && bestSupplierCheaperSavings.savings > 0"
-     class="text-xs text-green-600 font-medium"
+
+   <!-- Right: Metrics -->
+   <div
+    class="flex flex-row md:flex-col justify-between md:text-right gap-x-8 gap-y-0.5 border-t md:border-0 pt-3 md:pt-0 border-current/10"
+   >
+    <div>
+     <p class="text-xs uppercase tracking-wider opacity-70 font-semibold">
+      {{ recommendationState.metricLabel }}
+     </p>
+     <p class="text-xl font-bold leading-tight">
+      {{ formatCurrency(recommendationState.metricValue) }}
+     </p>
+    </div>
+
+    <!-- Optional Savings Badge -->
+    <div
+     v-if="
+      recommendationState.savings && recommendationState.savings.savings > 0
+     "
+     class="text-sm font-bold flex items-center md:justify-end gap-1"
     >
-     Save {{ formatCurrency(bestSupplierCheaperSavings.savings) }} ({{
-      formatPercentage(bestSupplierCheaperSavings.percentage)
-     }})
-    </p>
-    <p v-else class="text-xs text-muted-foreground">No savings</p>
+     <span class="bg-white/50 px-1.5 rounded text-xs">
+      Save {{ formatCurrency(recommendationState.savings.savings) }}
+     </span>
+     <span>
+      ({{ formatPercentage(recommendationState.savings.percentage) }})
+     </span>
+    </div>
    </div>
   </div>
 
@@ -365,6 +366,7 @@ const getThresholdPercentage = (supplierId: string): number | null => {
       <TableHead class="text-right">Order Cost</TableHead>
       <TableHead class="text-right">Supplier Cost</TableHead>
       <TableHead class="text-right">Savings</TableHead>
+      <TableHead class="text-center w-16">Details</TableHead>
      </TableRow>
     </TableHeader>
     <TableBody>
@@ -500,9 +502,31 @@ const getThresholdPercentage = (supplierId: string): number | null => {
         </template>
        </div>
       </TableCell>
+
+      <!-- Details Button -->
+      <TableCell class="text-center">
+       <Button
+        v-if="supplierTotal.products_cheaper > 0"
+        variant="ghost"
+        size="icon"
+        class="h-8 w-8"
+        @click="openProductsSheet(supplierTotal)"
+       >
+        <Eye class="h-4 w-4" />
+       </Button>
+       <span v-else class="text-muted-foreground text-sm">-</span>
+      </TableCell>
      </TableRow>
     </TableBody>
    </Table>
   </div>
+
+  <!-- Supplier Products Sheet -->
+  <SupplierProductsSheet
+   v-model:open="sheetOpen"
+   :supplier-total="selectedSupplierTotal"
+   :products="filteredProducts"
+   :is-local-order="isSelectedLocalOrder"
+  />
  </div>
 </template>

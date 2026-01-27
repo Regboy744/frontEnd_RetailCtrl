@@ -16,6 +16,12 @@ import {
  TooltipProvider,
  TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+ DropdownMenu,
+ DropdownMenuCheckboxItem,
+ DropdownMenuContent,
+ DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type {
  ProductComparison,
  ProductGroup,
@@ -32,8 +38,10 @@ import {
  Minus,
  Search,
  XCircle,
+ Settings2,
 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
+import { usePriceCheck } from '../composables/usePriceCheck'
 
 interface Props {
  suppliers: Supplier[]
@@ -41,6 +49,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// Composables
+const { toggleSupplier, isSupplierHidden, allSuppliers } = usePriceCheck()
 
 // Search filter
 const searchFilter = ref('')
@@ -304,6 +315,26 @@ const uniqueEanCount = computed(() => groupedProducts.value.length)
       class="pl-8 h-8 text-sm"
      />
     </div>
+
+    <!-- Column Visibility Menu -->
+    <DropdownMenu>
+     <DropdownMenuTrigger as-child>
+      <Button variant="outline" size="sm" class="ml-auto h-8 lg:flex">
+       <Settings2 class="mr-2 h-4 w-4" />
+       Columns
+      </Button>
+     </DropdownMenuTrigger>
+     <DropdownMenuContent align="end" class="w-[200px]">
+      <DropdownMenuCheckboxItem
+       v-for="supplier in allSuppliers"
+       :key="supplier.id"
+       :modelValue="!isSupplierHidden(supplier.id)"
+       @update:modelValue="toggleSupplier(supplier.id)"
+      >
+       {{ supplier.name }}
+      </DropdownMenuCheckboxItem>
+     </DropdownMenuContent>
+    </DropdownMenu>
    </div>
 
    <!-- Table Container -->

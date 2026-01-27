@@ -91,7 +91,11 @@ const handleUpload = async (data: { file: File; companyId: string }) => {
    </div>
 
    <!-- Summary Section -->
-   <PriceCheckSummary :summary="summary" :suppliers="suppliers" />
+   <PriceCheckSummary
+    :summary="summary"
+    :suppliers="suppliers"
+    :products="products"
+   />
 
    <!-- Products Not Found (moved above table for visibility) -->
    <ProductsNotFound
