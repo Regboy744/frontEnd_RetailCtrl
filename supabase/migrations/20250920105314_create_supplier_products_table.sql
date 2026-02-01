@@ -9,6 +9,7 @@ CREATE TABLE supplier_products (
     supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
     master_product_id UUID NOT NULL REFERENCES master_products(id) ON DELETE CASCADE,
     supplier_product_code TEXT,
+    internal_product_id TEXT,
     current_price DECIMAL(12,4) NOT NULL CHECK (current_price > 0),
     vat_rate DECIMAL(5,4) DEFAULT 0.0000 CHECK (vat_rate >= 0 AND vat_rate <= 100),
     availability_status TEXT DEFAULT 'available',
@@ -24,4 +25,5 @@ CREATE TABLE supplier_products (
 COMMENT ON TABLE supplier_products IS 'Baseline/reference prices from suppliers. Scraped using one company account per supplier.';
 COMMENT ON COLUMN supplier_products.current_price IS 'Baseline price used for comparison. May be from a specific company account.';
 COMMENT ON COLUMN supplier_products.scraped_from_company_id IS 'Company whose credentials were used to scrape this baseline price. NULL if neutral account.';
+COMMENT ON COLUMN supplier_products.internal_product_id IS 'Internal product ID from supplier system (required for S&W).';
 

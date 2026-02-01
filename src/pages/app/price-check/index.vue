@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { usePriceCheck } from '@/features/priceCheck/composables/usePriceCheck'
+import { useOrderSubmission } from '@/features/priceCheck/composables/useOrderSubmission'
 import OrderFileUpload from '@/features/priceCheck/components/OrderFileUpload.vue'
 import PriceCheckSummary from '@/features/priceCheck/components/PriceCheckSummary.vue'
 import PriceComparisonTable from '@/features/priceCheck/components/PriceComparisonTable.vue'
 import ProductsNotFound from '@/features/priceCheck/components/ProductsNotFound.vue'
+import OrderSelectionBar from '@/features/priceCheck/components/OrderSelectionBar.vue'
+import OrderSubmissionDialog from '@/features/priceCheck/components/OrderSubmissionDialog.vue'
+import OrderResultsDialog from '@/features/priceCheck/components/OrderResultsDialog.vue'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, RotateCcw, FileSpreadsheet } from 'lucide-vue-next'
+import { ref } from 'vue'
 
 const {
  isLoading,
@@ -14,13 +19,27 @@ const {
  suppliers,
  products,
  summary,
+ selectedProductsCount,
+ totalProductsCount,
  parseResult,
  checkPrices,
  clearResults,
 } = usePriceCheck()
 
+const { reset: resetOrderSubmission } = useOrderSubmission()
+
+// Track company ID from upload
+const currentCompanyId = ref<string>('')
+
 const handleUpload = async (data: { file: File; companyId: string }) => {
+ currentCompanyId.value = data.companyId
  await checkPrices(data.file, data.companyId)
+}
+
+const handleClearResults = () => {
+ clearResults()
+ resetOrderSubmission()
+ currentCompanyId.value = ''
 }
 </script>
 
@@ -34,7 +53,12 @@ const handleUpload = async (data: { file: File; companyId: string }) => {
      Compare supplier prices for your order
     </p>
    </div>
-   <Button v-if="hasResults" variant="outline" size="sm" @click="clearResults">
+   <Button
+    v-if="hasResults"
+    variant="outline"
+    size="sm"
+    @click="handleClearResults"
+   >
     <RotateCcw class="mr-2 h-4 w-4" />
     New Check
    </Button>
@@ -50,7 +74,9 @@ const handleUpload = async (data: { file: File; companyId: string }) => {
     <p class="font-medium text-destructive text-sm">Something went wrong</p>
     <p class="text-sm text-muted-foreground mt-0.5">{{ error }}</p>
    </div>
-   <Button variant="ghost" size="sm" @click="clearResults"> Try Again </Button>
+   <Button variant="ghost" size="sm" @click="handleClearResults">
+    Try Again
+   </Button>
   </div>
 
   <!-- Upload Section -->
@@ -95,16 +121,27 @@ const handleUpload = async (data: { file: File; companyId: string }) => {
     :summary="summary"
     :suppliers="suppliers"
     :products="products"
+    :selected-count="selectedProductsCount"
+    :total-count="totalProductsCount"
    />
 
    <!-- Products Not Found (moved above table for visibility) -->
    <ProductsNotFound
-    v-if="summary.products_not_found.length > 0"
-    :article-codes="summary.products_not_found"
+    v-if="summary.counts.products_not_found.length > 0"
+    :article-codes="summary.counts.products_not_found"
    />
 
    <!-- Comparison Table -->
    <PriceComparisonTable :suppliers="suppliers" :products="products" />
   </div>
+
+  <!-- Order Submission Components -->
+  <OrderSelectionBar />
+  <OrderSubmissionDialog
+   v-if="hasResults"
+   :suppliers="suppliers"
+   :company-id="currentCompanyId"
+  />
+  <OrderResultsDialog />
  </div>
 </template>
