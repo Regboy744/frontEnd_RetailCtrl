@@ -159,7 +159,7 @@ export const upsertMasterProducts = async (
   })
 
   const existingMap = new Map(
-   existingProducts?.map((p) => [p.article_code, p]) || [],
+   existingProducts?.map((p) => [p.article_code.trim(), p]) || [],
   )
 
   const toInsert: MasterProductInsert[] = []
@@ -168,7 +168,7 @@ export const upsertMasterProducts = async (
 
   for (let i = 0; i < products.length; i++) {
    const product = products[i]!
-   const existing = existingMap.get(product.article_code)
+   const existing = existingMap.get(product.article_code.trim())
 
    if (existing) {
     // Product exists - check if update needed
@@ -181,14 +181,14 @@ export const upsertMasterProducts = async (
       eanHistory = [...eanHistory, existing.ean_code]
       eanHistoryUpdated++
      }
-     updateData.ean_code = product.ean_code
+     updateData.ean_code = product.ean_code.trim()
      updateData.ean_history = eanHistory as unknown as Json
     }
 
     // Always update other fields
-    updateData.description = product.description
-    updateData.account = product.account || null
-    updateData.unit_size = product.unit_size || null
+    updateData.description = product.description.trim()
+    updateData.account = product.account?.trim() || null
+    updateData.unit_size = product.unit_size?.trim() || null
     updateData.is_active = true
 
     toUpdate.push({ id: existing.id, data: updateData })
@@ -196,11 +196,11 @@ export const upsertMasterProducts = async (
     // New product - insert
     toInsert.push({
      brand_id: brandId,
-     article_code: product.article_code,
-     ean_code: product.ean_code,
-     description: product.description,
-     account: product.account || null,
-     unit_size: product.unit_size || null,
+     article_code: product.article_code.trim(),
+     ean_code: product.ean_code.trim(),
+     description: product.description.trim(),
+     account: product.account?.trim() || null,
+     unit_size: product.unit_size?.trim() || null,
      ean_history: [],
      is_active: true,
     })

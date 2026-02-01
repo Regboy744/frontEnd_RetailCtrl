@@ -1,118 +1,121 @@
 <script setup lang="ts">
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+ Sheet,
+ SheetContent,
+ SheetDescription,
+ SheetHeader,
+ SheetTitle,
+} from '@/components/ui/sheet'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import type { ProductComparison, SupplierRanking } from '@/features/priceCheck/types';
-import { computed } from 'vue';
+ Table,
+ TableBody,
+ TableCell,
+ TableHead,
+ TableHeader,
+ TableRow,
+} from '@/components/ui/table'
+import type {
+ ProductComparison,
+ SupplierRanking,
+} from '@/features/priceCheck/types'
+import { computed } from 'vue'
 
 interface Props {
-  open: boolean;
-  supplierRanking: SupplierRanking | null;
-  products: ProductComparison[];
-  isLocalOrder?: boolean;
+ open: boolean
+ supplierRanking: SupplierRanking | null
+ products: ProductComparison[]
+ isLocalOrder?: boolean
 }
 
-type Emits = (e: 'update:open', value: boolean) => void;
+type Emits = (e: 'update:open', value: boolean) => void
 
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
 
 // Format currency
 const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IE', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(amount);
-};
+ return new Intl.NumberFormat('en-IE', {
+  style: 'currency',
+  currency: 'EUR',
+ }).format(amount)
+}
 
 // Get the title based on supplier or local order
 const sheetTitle = computed(() => {
-  if (!props.supplierRanking) return 'Product Details';
-  if (props.isLocalOrder) {
-    return 'Products Where Order is Best';
-  }
-  return `Products Where ${props.supplierRanking.supplier_name} is Cheaper`;
-});
+ if (!props.supplierRanking) return 'Product Details'
+ if (props.isLocalOrder) {
+  return 'Products Where Order is Best'
+ }
+ return `Products Where ${props.supplierRanking.supplier_name} is Cheaper`
+})
 
 // Get the description
 const sheetDescription = computed(() => {
-  const count = props.products.length;
-  if (!props.supplierRanking) return '';
-  if (props.isLocalOrder) {
-    return `${count} product${count !== 1 ? 's' : ''} where your current order price is the best option`;
-  }
-  return `${count} product${count !== 1 ? 's' : ''} where switching to ${props.supplierRanking.supplier_name} would save money`;
-});
+ const count = props.products.length
+ if (!props.supplierRanking) return ''
+ if (props.isLocalOrder) {
+  return `${count} product${count !== 1 ? 's' : ''} where your current order price is the best option`
+ }
+ return `${count} product${count !== 1 ? 's' : ''} where switching to ${props.supplierRanking.supplier_name} would save money`
+})
 
 // Get supplier price for a product
 const getSupplierPrice = (product: ProductComparison): number | null => {
-  if (!props.supplierRanking || props.isLocalOrder) return null;
-  const prices = product.supplier_prices[props.supplierRanking.supplier_id];
-  if (!prices || prices.length === 0) return null;
-  const firstPrice = prices[0];
-  if (!firstPrice) return null;
-  return firstPrice.unit_price;
-};
+ if (!props.supplierRanking || props.isLocalOrder) return null
+ const prices = product.supplier_prices[props.supplierRanking.supplier_id]
+ if (!prices || prices.length === 0) return null
+ const firstPrice = prices[0]
+ if (!firstPrice) return null
+ return firstPrice.unit_price
+}
 
 // Get supplier product code
 const getSupplierCode = (product: ProductComparison): string => {
-  if (!props.supplierRanking || props.isLocalOrder) return '-';
-  const prices = product.supplier_prices[props.supplierRanking.supplier_id];
-  if (!prices || prices.length === 0) return '-';
-  const firstPrice = prices[0];
-  if (!firstPrice) return '-';
-  return firstPrice.supplier_product_code || '-';
-};
+ if (!props.supplierRanking || props.isLocalOrder) return '-'
+ const prices = product.supplier_prices[props.supplierRanking.supplier_id]
+ if (!prices || prices.length === 0) return '-'
+ const firstPrice = prices[0]
+ if (!firstPrice) return '-'
+ return firstPrice.supplier_product_code || '-'
+}
 
 // Calculate savings for a product (line total = unit savings * quantity)
 const getSavings = (product: ProductComparison): number => {
-  if (props.isLocalOrder) {
-    // For local order, savings is the difference between best supplier price and order price
-    // (should be 0 or negative since order is best)
-    return 0;
-  }
-  const supplierPrice = getSupplierPrice(product);
-  if (supplierPrice === null) return 0;
-  // Multiply by quantity to get line savings
-  return (product.order.unit_cost - supplierPrice) * product.order.quantity;
-};
+ if (props.isLocalOrder) {
+  // For local order, savings is the difference between best supplier price and order price
+  // (should be 0 or negative since order is best)
+  return 0
+ }
+ const supplierPrice = getSupplierPrice(product)
+ if (supplierPrice === null) return 0
+ // Multiply by quantity to get line savings
+ return (product.order.unit_cost - supplierPrice) * product.order.quantity
+}
 
 // Total savings across all products in the list
 const totalSavings = computed(() => {
-  if (props.isLocalOrder) return 0;
-  return props.products.reduce((sum, product) => {
-    return sum + getSavings(product);
-  }, 0);
-});
+ if (props.isLocalOrder) return 0
+ return props.products.reduce((sum, product) => {
+  return sum + getSavings(product)
+ }, 0)
+})
 
 // Total order cost for products in the list (use line_cost which is unit_cost * quantity)
 const totalOrderCost = computed(() => {
-  return props.products.reduce((sum, product) => {
-    return sum + product.order.line_cost;
-  }, 0);
-});
+ return props.products.reduce((sum, product) => {
+  return sum + product.order.line_cost
+ }, 0)
+})
 
 // Total supplier cost for products in the list (unit_price * quantity)
 const totalSupplierCost = computed(() => {
-  if (props.isLocalOrder) return totalOrderCost.value;
-  return props.products.reduce((sum, product) => {
-    const supplierPrice = getSupplierPrice(product);
-    const quantity = product.order.quantity;
-    return sum + (supplierPrice ?? product.order.unit_cost) * quantity;
-  }, 0);
-});
+ if (props.isLocalOrder) return totalOrderCost.value
+ return props.products.reduce((sum, product) => {
+  const supplierPrice = getSupplierPrice(product)
+  const quantity = product.order.quantity
+  return sum + (supplierPrice ?? product.order.unit_cost) * quantity
+ }, 0)
+})
 </script>
 
 <template>

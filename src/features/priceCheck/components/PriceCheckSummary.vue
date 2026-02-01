@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge'
 import {
  Table,
  TableBody,
@@ -23,6 +22,7 @@ import {
  TrendingDown,
 } from 'lucide-vue-next'
 import { computed } from 'vue'
+import StatCard from './StatCard.vue'
 
 interface Props {
  summary: ComparisonSummary
@@ -78,20 +78,6 @@ const getSupplierRank = (supplierId: string): number => {
  return suppliersOnly.findIndex((s) => s.supplier_id === supplierId) + 1
 }
 
-// Check if supplier has the most selections (and is not local order)
-const hasTopSelections = (supplierId: string): boolean => {
- if (supplierId === 'local_order') return false
- const suppliersOnly = sortedSupplierRankings.value.filter(
-  (s) => s.supplier_id !== 'local_order',
- )
- if (suppliersOnly.length === 0) return false
- const topSupplier = suppliersOnly[0]
- return (
-  topSupplier?.supplier_id === supplierId &&
-  (topSupplier?.products_won ?? 0) > 0
- )
-}
-
 // Check if this is the local order row
 const isLocalOrder = (supplierId: string): boolean => {
  return supplierId === 'local_order'
@@ -118,88 +104,56 @@ const getThresholdPercentage = (supplierId: string): number | null => {
    </span>
   </div>
 
-  <!-- Stats Row - Compact horizontal layout -->
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+  <!-- Stats Row - Beautiful responsive cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
    <!-- Order Value -->
-   <div class="bg-card border rounded-lg p-3">
-    <div class="flex items-center gap-2 text-muted-foreground mb-1">
-     <Receipt class="h-3.5 w-3.5" />
-     <span class="text-xs font-medium">Order Value</span>
-    </div>
-    <p class="text-lg font-bold">
-     {{ formatCurrency(summary.order_totals.total_order_value) }}
-    </p>
-   </div>
+   <StatCard
+    :icon="Receipt"
+    label="Order Value"
+    :value="formatCurrency(summary.order_totals.total_order_value)"
+    icon-bg="bg-blue-100"
+    icon-color="text-blue-600"
+   />
 
    <!-- Products Found -->
-   <div class="bg-card border rounded-lg p-3">
-    <div class="flex items-center gap-2 text-muted-foreground mb-1">
-     <Package class="h-3.5 w-3.5" />
-     <span class="text-xs font-medium">Products Found</span>
-    </div>
-    <p class="text-lg font-bold">
-     {{ summary.counts.products_found }}
-     <span class="text-sm font-normal text-muted-foreground">
-      / {{ summary.counts.total_items_submitted }}
-     </span>
-    </p>
-   </div>
+   <StatCard
+    :icon="Package"
+    label="Products Found"
+    :value="summary.counts.products_found"
+    :sub-value="`/ ${summary.counts.total_items_submitted}`"
+    icon-bg="bg-green-100"
+    icon-color="text-green-600"
+   />
 
    <!-- Not Found -->
-   <div class="bg-card border rounded-lg p-3">
-    <div class="flex items-center gap-2 text-muted-foreground mb-1">
-     <PackageX class="h-3.5 w-3.5" />
-     <span class="text-xs font-medium">Not Found</span>
-    </div>
-    <p
-     :class="[
-      'text-lg font-bold',
-      summary.counts.products_not_found.length > 0
-       ? 'text-amber-500'
-       : 'text-muted-foreground',
-     ]"
-    >
-     {{ summary.counts.products_not_found.length }}
-    </p>
-   </div>
+   <StatCard
+    :icon="PackageX"
+    label="Not Found"
+    :value="summary.counts.products_not_found.length"
+    icon-bg="bg-orange-100"
+    icon-color="text-orange-600"
+   />
 
    <!-- Your Savings (from selections) -->
-   <div class="bg-card border rounded-lg p-3">
-    <div class="flex items-center gap-2 text-muted-foreground mb-1">
-     <TrendingDown class="h-3.5 w-3.5" />
-     <span class="text-xs font-medium">Your Savings</span>
-    </div>
-    <p
-     :class="[
-      'text-lg font-bold',
-      summary.evaluation_results.max_potential_savings &&
-      summary.evaluation_results.max_potential_savings > 0
-       ? 'text-green-500'
-       : 'text-muted-foreground',
-     ]"
-    >
-     {{ formatCurrency(summary.evaluation_results.max_potential_savings ?? 0) }}
-    </p>
-   </div>
+   <StatCard
+    :icon="TrendingDown"
+    label="Your Savings"
+    :value="
+     formatCurrency(summary.evaluation_results.max_potential_savings ?? 0)
+    "
+    icon-bg="bg-emerald-100"
+    icon-color="text-emerald-600"
+   />
 
    <!-- Selected from Suppliers -->
-   <div class="bg-card border rounded-lg p-3">
-    <div class="flex items-center gap-2 text-muted-foreground mb-1">
-     <ShoppingCart class="h-3.5 w-3.5" />
-     <span class="text-xs font-medium">From Suppliers</span>
-    </div>
-    <p
-     :class="[
-      'text-lg font-bold',
-      selectedCount > 0 ? 'text-primary' : 'text-muted-foreground',
-     ]"
-    >
-     {{ selectedCount }}
-     <span class="text-sm font-normal text-muted-foreground">
-      / {{ totalCount }}
-     </span>
-    </p>
-   </div>
+   <StatCard
+    :icon="ShoppingCart"
+    label="From Suppliers"
+    :value="selectedCount"
+    :sub-value="`/ ${totalCount}`"
+    icon-bg="bg-purple-100"
+    icon-color="text-purple-600"
+   />
   </div>
 
   <!-- Supplier Comparison Table - Based on your selections -->
@@ -220,27 +174,15 @@ const getThresholdPercentage = (supplierId: string): number | null => {
      <TableRow
       v-for="supplierRanking in sortedSupplierRankings"
       :key="supplierRanking.supplier_id"
-      :class="[
-       isLocalOrder(supplierRanking.supplier_id)
-        ? 'bg-blue-500/5'
-        : hasTopSelections(supplierRanking.supplier_id)
-          ? 'bg-green-500/5'
-          : 'hover:bg-muted/30',
-      ]"
+      class="hover:bg-muted/30"
      >
       <!-- Rank -->
       <TableCell class="text-center">
        <span
         v-if="isLocalOrder(supplierRanking.supplier_id)"
-        class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold"
+        class="text-muted-foreground text-sm"
        >
         —
-       </span>
-       <span
-        v-else-if="hasTopSelections(supplierRanking.supplier_id)"
-        class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold"
-       >
-        1
        </span>
        <span v-else class="text-muted-foreground text-sm">
         {{ getSupplierRank(supplierRanking.supplier_id) }}
@@ -249,30 +191,9 @@ const getThresholdPercentage = (supplierId: string): number | null => {
 
       <!-- Supplier Name -->
       <TableCell>
-       <div class="flex items-center gap-2">
-        <span
-         :class="[
-          'font-medium',
-          isLocalOrder(supplierRanking.supplier_id) ? 'text-blue-600' : '',
-         ]"
-        >
-         {{ supplierRanking.supplier_name }}
-        </span>
-        <Badge
-         v-if="isLocalOrder(supplierRanking.supplier_id)"
-         variant="outline"
-         class="border-blue-500 text-blue-600 text-xs px-1.5 py-0"
-        >
-         Baseline
-        </Badge>
-        <Badge
-         v-else-if="hasTopSelections(supplierRanking.supplier_id)"
-         variant="default"
-         class="bg-green-500 text-xs px-1.5 py-0"
-        >
-         Top
-        </Badge>
-       </div>
+       <span class="font-medium">
+        {{ supplierRanking.supplier_name }}
+       </span>
       </TableCell>
 
       <!-- Threshold % -->
@@ -303,41 +224,15 @@ const getThresholdPercentage = (supplierId: string): number | null => {
 
       <!-- Order Cost (baseline for selected products) -->
       <TableCell class="text-right">
-       <span
-        :class="[
-         'font-semibold',
-         isLocalOrder(supplierRanking.supplier_id) ? 'text-blue-600' : '',
-        ]"
-       >
-        {{
-         formatCurrency(
-          isLocalOrder(supplierRanking.supplier_id)
-           ? supplierRanking.won_products_order_cost
-           : supplierRanking.won_products_order_cost,
-         )
-        }}
+       <span class="font-semibold">
+        {{ formatCurrency(supplierRanking.won_products_order_cost) }}
        </span>
       </TableCell>
 
       <!-- Supplier Cost -->
       <TableCell class="text-right">
-       <span
-        :class="[
-         'font-semibold',
-         isLocalOrder(supplierRanking.supplier_id)
-          ? 'text-blue-600'
-          : hasTopSelections(supplierRanking.supplier_id)
-            ? 'text-green-600'
-            : '',
-        ]"
-       >
-        {{
-         formatCurrency(
-          isLocalOrder(supplierRanking.supplier_id)
-           ? supplierRanking.won_products_supplier_cost
-           : supplierRanking.won_products_supplier_cost,
-         )
-        }}
+       <span class="font-semibold">
+        {{ formatCurrency(supplierRanking.won_products_supplier_cost) }}
        </span>
       </TableCell>
 

@@ -54,6 +54,15 @@ export const csvRowSchema = z.object({
 
 export type CsvRowValues = z.infer<typeof csvRowSchema>
 
+interface RawCsvRow {
+ article_code?: string
+ ean_code?: string
+ description?: string
+ account?: string
+ unit_size?: string
+ [key: string]: unknown
+}
+
 // Validate array of CSV rows
 export const validateCsvRows = (
  rows: unknown[],
@@ -65,7 +74,18 @@ export const validateCsvRows = (
  const errors: { row: number; field: string; message: string }[] = []
 
  rows.forEach((row, index) => {
-  const result = csvRowSchema.safeParse(row)
+  // Trim string fields before validation
+  const rawRow = row as RawCsvRow
+  const trimmedRow: RawCsvRow = {
+   ...rawRow,
+   article_code: rawRow.article_code?.trim(),
+   ean_code: rawRow.ean_code?.trim(),
+   description: rawRow.description?.trim(),
+   account: rawRow.account?.trim(),
+   unit_size: rawRow.unit_size?.trim(),
+  }
+
+  const result = csvRowSchema.safeParse(trimmedRow)
   if (result.success) {
    validRows.push(result.data)
   } else {
