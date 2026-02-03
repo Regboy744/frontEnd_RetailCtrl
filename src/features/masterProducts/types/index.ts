@@ -60,16 +60,13 @@ export interface CsvValidationError {
  value?: string
 }
 
-// CSV preview data for upsert
+// CSV preview data for import
 export interface CsvPreviewItem {
  article_code: string
  ean_code: string
  description: string
  account?: string
  unit_size?: string
- status: 'new' | 'updated' | 'ean_changed' | 'unchanged'
- changes?: string[] // List of changed fields
- existingProduct?: MasterProduct // Reference to existing product if updating
 }
 
 export interface CsvPreviewData {
@@ -78,10 +75,6 @@ export interface CsvPreviewData {
  items: CsvPreviewItem[]
  summary: {
   total: number
-  new: number
-  updated: number
-  eanChanged: number
-  unchanged: number
  }
 }
 
@@ -89,14 +82,13 @@ export interface CsvPreviewData {
 export interface UpsertResult {
  success: boolean
  inserted: number
- updated: number
- eanHistoryUpdated: number
+ skipped: number
  errors?: string[]
 }
 
 // Progress tracking for batch upsert operations
 export interface UpsertProgress {
- phase: 'fetching' | 'processing' | 'inserting' | 'updating' | 'complete'
+ phase: 'fetching' | 'processing' | 'inserting' | 'complete'
  current: number
  total: number
  message: string

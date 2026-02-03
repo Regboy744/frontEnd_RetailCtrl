@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { h, ref, watch } from 'vue'
+import { watchDebounced } from '@vueuse/core'
+import { toast } from 'vue-sonner'
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { DataTableConfig } from '@/types/shared/custom.types'
 import DataTable from '@/components/appDataTable/DataTable.vue'
 import Button from '@/components/ui/button/Button.vue'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
  Select,
  SelectContent,
@@ -37,6 +40,9 @@ const {
  removeMasterProduct,
  activateMasterProduct,
  filterByBrand,
+ setArticleCodeFilter,
+ setEanCodeFilter,
+ setDescriptionFilter,
  generateCsvPreview,
  applyCsvUpsert,
  cancelUpload,
@@ -78,9 +84,9 @@ const handleBrandFilterChange = async (value: unknown) => {
 }
 
 // Handle CSV preview request
-const handleCsvPreview = async (data: { brandId: string; rows: CsvRow[] }) => {
+const handleCsvPreview = (data: { brandId: string; rows: CsvRow[] }) => {
  csvRows.value = data.rows
- const preview = await generateCsvPreview(data.brandId, data.rows)
+ const preview = generateCsvPreview(data.brandId, data.rows)
  if (preview) {
   csvPreviewData.value = preview
   showPreview.value = true
@@ -98,6 +104,21 @@ const handleCsvApply = async () => {
    csvRows.value,
   )
   if (result) {
+   // Show toast with results
+   if (result.inserted > 0 && result.skipped === 0) {
+    toast.success(`Inserted ${result.inserted} products`)
+   } else if (result.inserted > 0 && result.skipped > 0) {
+    toast.success(
+     `Inserted ${result.inserted} products, skipped ${result.skipped} (already exist)`,
+    )
+   } else if (result.inserted === 0 && result.skipped > 0) {
+    toast.info(`No products inserted - all ${result.skipped} already exist`)
+   }
+
+   if (result.errors && result.errors.length > 0) {
+    toast.error(`${result.errors.length} errors occurred during import`)
+   }
+
    // Reset state
    csvPreviewData.value = null
    csvRows.value = []
@@ -119,18 +140,49 @@ const handleCsvCancel = () => {
  cancelUpload()
 }
 
+// Local filter inputs (for debouncing)
+const localArticleCodeFilter = ref('')
+const localEanCodeFilter = ref('')
+const localDescriptionFilter = ref('')
+
+// Debounced watchers for server-side filtering
+watchDebounced(
+ localArticleCodeFilter,
+ async (value) => {
+  setArticleCodeFilter(value)
+  await fetchMasterProducts()
+ },
+ { debounce: 400 },
+)
+
+watchDebounced(
+ localEanCodeFilter,
+ async (value) => {
+  setEanCodeFilter(value)
+  await fetchMasterProducts()
+ },
+ { debounce: 400 },
+)
+
+watchDebounced(
+ localDescriptionFilter,
+ async (value) => {
+  setDescriptionFilter(value)
+  await fetchMasterProducts()
+ },
+ { debounce: 400 },
+)
+
 // Table config
 const tableConfig: DataTableConfig = {
  features: {
   rowSelection: false,
   pagination: true,
   sorting: true,
-  filtering: true,
+  filtering: false, // Server-side filtering via custom inputs
   columnVisibility: true,
  },
  pageSize: 20,
- searchColumn: 'description',
- searchPlaceholder: 'Filter by description...',
 }
 
 // Table columns
@@ -297,6 +349,27 @@ const columns: ColumnDef<MasterProductWithBrand>[] = [
       </SelectGroup>
      </SelectContent>
     </Select>
+
+    <!-- Article Code Filter (Server-side) -->
+    <Input
+     v-model="localArticleCodeFilter"
+     class="w-48"
+     placeholder="Search article code..."
+    />
+
+    <!-- EAN Code Filter (Server-side) -->
+    <Input
+     v-model="localEanCodeFilter"
+     class="w-48"
+     placeholder="Search EAN code..."
+    />
+
+    <!-- Description Filter (Server-side) -->
+    <Input
+     v-model="localDescriptionFilter"
+     class="w-56"
+     placeholder="Search description..."
+    />
 
     <!-- CSV Upload -->
     <SharedSheet

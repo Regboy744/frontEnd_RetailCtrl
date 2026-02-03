@@ -67,13 +67,48 @@ export const brandsQuery = () =>
 
 export type BrandsQueryType = QueryData<ReturnType<typeof brandsQuery>>
 
-// Query master products by brand for upsert comparison (minimal fields)
-export const masterProductsForUpsertQuery = (brandId: string) =>
- supabase
-  .from('master_products')
-  .select('id, article_code, ean_code, description, account, unit_size')
-  .eq('brand_id', brandId)
+// Filter options for master products query
+export interface MasterProductsFilterOptions {
+ brandId?: string | null
+ articleCode?: string | null
+ eanCode?: string | null
+ description?: string | null
+ limit?: number
+}
 
-export type MasterProductsForUpsertQueryType = QueryData<
- ReturnType<typeof masterProductsForUpsertQuery>
+// Query master products with optional filters (server-side filtering)
+export const masterProductsFilteredQuery = (
+ filters?: MasterProductsFilterOptions,
+) => {
+ let query = supabase
+  .from('master_products')
+  .select(
+   `
+      *,
+      brands (
+        name
+      )
+    `,
+  )
+  .order('description', { ascending: true })
+  .limit(filters?.limit ?? 100)
+
+ if (filters?.brandId) {
+  query = query.eq('brand_id', filters.brandId)
+ }
+ if (filters?.articleCode) {
+  query = query.ilike('article_code', `%${filters.articleCode}%`)
+ }
+ if (filters?.eanCode) {
+  query = query.ilike('ean_code', `%${filters.eanCode}%`)
+ }
+ if (filters?.description) {
+  query = query.ilike('description', `%${filters.description}%`)
+ }
+
+ return query
+}
+
+export type MasterProductsFilteredQueryType = QueryData<
+ ReturnType<typeof masterProductsFilteredQuery>
 >

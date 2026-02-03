@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { SheetClose } from '@/components/ui/sheet'
 import {
  Table,
@@ -10,14 +9,7 @@ import {
  TableHeader,
  TableRow,
 } from '@/components/ui/table'
-import {
- Loader2,
- Plus,
- RefreshCw,
- AlertTriangle,
- Minus,
- X,
-} from 'lucide-vue-next'
+import { Loader2, X } from 'lucide-vue-next'
 import type {
  CsvPreviewData,
  UpsertProgress,
@@ -36,41 +28,6 @@ const emit = defineEmits<{
  back: []
  cancel: []
 }>()
-
-// Get status badge variant
-const getStatusBadge = (status: string) => {
- switch (status) {
-  case 'new':
-   return { variant: 'default' as const, class: 'bg-green-500', icon: Plus }
-  case 'updated':
-   return { variant: 'default' as const, class: 'bg-blue-500', icon: RefreshCw }
-  case 'ean_changed':
-   return {
-    variant: 'default' as const,
-    class: 'bg-amber-500',
-    icon: AlertTriangle,
-   }
-  case 'unchanged':
-   return { variant: 'secondary' as const, class: '', icon: Minus }
-  default:
-   return { variant: 'secondary' as const, class: '', icon: Minus }
- }
-}
-
-const formatStatus = (status: string) => {
- switch (status) {
-  case 'new':
-   return 'New'
-  case 'updated':
-   return 'Update'
-  case 'ean_changed':
-   return 'EAN Changed'
-  case 'unchanged':
-   return 'No Change'
-  default:
-   return status
- }
-}
 </script>
 
 <template>
@@ -86,41 +43,9 @@ const formatStatus = (status: string) => {
     <div class="flex-1 border-t border-border"></div>
    </div>
 
-   <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-    <div class="bg-muted/30 p-3 rounded-lg border border-border/50 text-center">
-     <p class="text-2xl font-bold">{{ previewData.summary.total }}</p>
-     <p class="text-xs text-muted-foreground">Total</p>
-    </div>
-    <div
-     class="bg-green-500/10 p-3 rounded-lg border border-green-500/30 text-center"
-    >
-     <p class="text-2xl font-bold text-green-500">
-      {{ previewData.summary.new }}
-     </p>
-     <p class="text-xs text-muted-foreground">New</p>
-    </div>
-    <div
-     class="bg-blue-500/10 p-3 rounded-lg border border-blue-500/30 text-center"
-    >
-     <p class="text-2xl font-bold text-blue-500">
-      {{ previewData.summary.updated }}
-     </p>
-     <p class="text-xs text-muted-foreground">Updated</p>
-    </div>
-    <div
-     class="bg-amber-500/10 p-3 rounded-lg border border-amber-500/30 text-center"
-    >
-     <p class="text-2xl font-bold text-amber-500">
-      {{ previewData.summary.eanChanged }}
-     </p>
-     <p class="text-xs text-muted-foreground">EAN Changed</p>
-    </div>
-    <div class="bg-muted/30 p-3 rounded-lg border border-border/50 text-center">
-     <p class="text-2xl font-bold text-muted-foreground">
-      {{ previewData.summary.unchanged }}
-     </p>
-     <p class="text-xs text-muted-foreground">Unchanged</p>
-    </div>
+   <div class="bg-muted/30 p-4 rounded-lg border border-border/50 text-center">
+    <p class="text-3xl font-bold">{{ previewData.summary.total }}</p>
+    <p class="text-sm text-muted-foreground">Products to import</p>
    </div>
   </div>
 
@@ -130,7 +55,7 @@ const formatStatus = (status: string) => {
     <span
      class="text-sm font-semibold text-muted-foreground uppercase tracking-wide"
     >
-     Changes Detail
+     CSV Preview
     </span>
     <div class="flex-1 border-t border-border"></div>
    </div>
@@ -140,44 +65,19 @@ const formatStatus = (status: string) => {
      <Table>
       <TableHeader>
        <TableRow>
-        <TableHead class="w-24">Status</TableHead>
         <TableHead>Article Code</TableHead>
         <TableHead>EAN Code</TableHead>
         <TableHead>Description</TableHead>
-        <TableHead class="w-48">Changes</TableHead>
        </TableRow>
       </TableHeader>
       <TableBody>
        <TableRow
         v-for="(item, index) in previewData.items.slice(0, 100)"
         :key="index"
-        :class="{
-         'bg-green-500/5': item.status === 'new',
-         'bg-blue-500/5': item.status === 'updated',
-         'bg-amber-500/5': item.status === 'ean_changed',
-        }"
        >
-        <TableCell>
-         <Badge
-          :variant="getStatusBadge(item.status).variant"
-          :class="getStatusBadge(item.status).class"
-          class="text-xs"
-         >
-          {{ formatStatus(item.status) }}
-         </Badge>
-        </TableCell>
         <TableCell class="font-mono text-xs">{{ item.article_code }}</TableCell>
         <TableCell class="font-mono text-xs">{{ item.ean_code }}</TableCell>
         <TableCell class="max-w-48 truncate">{{ item.description }}</TableCell>
-        <TableCell class="text-xs text-muted-foreground">
-         <span v-if="item.changes && item.changes.length > 0">
-          {{ item.changes.join(', ') }}
-         </span>
-         <span v-else-if="item.status === 'new'" class="text-green-500">
-          New product
-         </span>
-         <span v-else class="text-muted-foreground">-</span>
-        </TableCell>
        </TableRow>
       </TableBody>
      </Table>
@@ -190,18 +90,6 @@ const formatStatus = (status: string) => {
      Showing first 100 of {{ previewData.items.length }} items
     </div>
    </div>
-  </div>
-
-  <!-- Info about EAN history -->
-  <div
-   v-if="previewData.summary.eanChanged > 0"
-   class="bg-amber-500/10 p-4 rounded-lg border border-amber-500/30"
-  >
-   <p class="text-sm font-medium text-amber-500">EAN Code Changes Detected</p>
-   <p class="text-xs text-muted-foreground mt-1">
-    {{ previewData.summary.eanChanged }} product(s) have different EAN codes.
-    The old EAN codes will be saved in the product's history for reference.
-   </p>
   </div>
 
   <!-- Upload Progress -->
@@ -251,7 +139,6 @@ const formatStatus = (status: string) => {
       'bg-green-500/20 text-green-500': uploadProgress.phase === 'fetching',
       'bg-blue-500/20 text-blue-500': uploadProgress.phase === 'processing',
       'bg-purple-500/20 text-purple-500': uploadProgress.phase === 'inserting',
-      'bg-amber-500/20 text-amber-500': uploadProgress.phase === 'updating',
       'bg-emerald-500/20 text-emerald-500': uploadProgress.phase === 'complete',
      }"
     >
@@ -279,19 +166,15 @@ const formatStatus = (status: string) => {
       type="button"
       class="w-full sm:w-45"
       :disabled="
-       isApplying ||
-       !!uploadProgress ||
-       (previewData.summary.new === 0 &&
-        previewData.summary.updated === 0 &&
-        previewData.summary.eanChanged === 0)
+       isApplying || !!uploadProgress || previewData.summary.total === 0
       "
       @click="emit('apply')"
      >
       <Loader2 v-if="isApplying" class="mr-2 h-4 w-4 animate-spin" />
       {{
        isApplying
-        ? 'Applying...'
-        : `Apply ${previewData.summary.new + previewData.summary.updated + previewData.summary.eanChanged} Changes`
+        ? 'Importing...'
+        : `Import ${previewData.summary.total} Products`
       }}
      </Button>
     </SheetClose>

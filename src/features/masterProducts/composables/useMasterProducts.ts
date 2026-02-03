@@ -1,10 +1,8 @@
 import { ref, computed } from 'vue'
 import { useErrorStore } from '@/stores/error'
 import {
- masterProductsQuery,
- masterProductsByBrandQuery,
  brandsQuery,
- masterProductsForUpsertQuery,
+ masterProductsFilteredQuery,
 } from '@/features/masterProducts/api/queries'
 import type {
  MasterProductWithBrand,
@@ -27,6 +25,9 @@ export const useMasterProducts = () => {
  const masterProducts = ref<MasterProductWithBrand[] | null>(null)
  const brands = ref<BrandOption[] | null>(null)
  const selectedBrandId = ref<string | null>(null)
+ const articleCodeFilter = ref<string>('')
+ const eanCodeFilter = ref<string>('')
+ const descriptionFilter = ref<string>('')
  const isLoading = ref(false)
  const errorStore = useErrorStore()
 
@@ -34,13 +35,17 @@ export const useMasterProducts = () => {
  const uploadProgress = ref<UpsertProgress | null>(null)
  const cancelSignal = ref<{ cancelled: boolean }>({ cancelled: false })
 
- // Fetch all master products (with optional brand filter)
- const fetchMasterProducts = async (brandId?: string | null) => {
+ // Fetch master products with server-side filters
+ const fetchMasterProducts = async () => {
   isLoading.value = true
   try {
-   const query = brandId
-    ? masterProductsByBrandQuery(brandId)
-    : masterProductsQuery()
+   const query = masterProductsFilteredQuery({
+    brandId: selectedBrandId.value,
+    articleCode: articleCodeFilter.value || null,
+    eanCode: eanCodeFilter.value || null,
+    description: descriptionFilter.value || null,
+    limit: 100,
+   })
 
    const { data, error, status } = await query
 
@@ -106,7 +111,7 @@ export const useMasterProducts = () => {
   }
 
   // Refresh list
-  await fetchMasterProducts(selectedBrandId.value)
+  await fetchMasterProducts()
   return true
  }
 
@@ -123,7 +128,7 @@ export const useMasterProducts = () => {
   }
 
   // Refresh list
-  await fetchMasterProducts(selectedBrandId.value)
+  await fetchMasterProducts()
   return true
  }
 
@@ -140,132 +145,42 @@ export const useMasterProducts = () => {
   }
 
   // Refresh list
-  await fetchMasterProducts(selectedBrandId.value)
+  await fetchMasterProducts()
   return true
  }
 
  // Generate preview data for CSV upload
- const generateCsvPreview = async (
+ // Simply formats CSV data for display - no DB query needed
+ const generateCsvPreview = (
   brandId: string,
   csvRows: CsvRow[],
- ): Promise<CsvPreviewData | null> => {
-  try {
-   // Get existing products for this brand
-   const { data: existingProducts, error } =
-    await masterProductsForUpsertQuery(brandId)
-
-   if (error) {
-    errorStore.setError({ error, customCode: 500 })
-    return null
-   }
-
-   // Get brand name
-   const brand = brands.value?.find((b) => b.id === brandId)
-   if (!brand) {
-    errorStore.setError({
-     error: new Error('Brand not found'),
-     customCode: 404,
-    })
-    return null
-   }
-
-   // Create map for quick lookup
-   const existingMap = new Map(
-    existingProducts?.map((p) => [p.article_code, p]) || [],
-   )
-
-   const items: CsvPreviewItem[] = []
-   let newCount = 0
-   let updatedCount = 0
-   let eanChangedCount = 0
-   let unchangedCount = 0
-
-   for (const row of csvRows) {
-    const existing = existingMap.get(row.article_code)
-
-    if (!existing) {
-     // New product
-     items.push({
-      article_code: row.article_code,
-      ean_code: row.ean_code,
-      description: row.description,
-      account: row.account,
-      unit_size: row.unit_size,
-      status: 'new',
-     })
-     newCount++
-    } else {
-     // Check what changed
-     const changes: string[] = []
-
-     if (row.ean_code !== existing.ean_code) {
-      changes.push(`EAN: ${existing.ean_code} → ${row.ean_code}`)
-     }
-     if (row.description !== existing.description) {
-      changes.push('Description')
-     }
-     if ((row.account || null) !== existing.account) {
-      changes.push('Account')
-     }
-     if ((row.unit_size || null) !== existing.unit_size) {
-      changes.push('Unit Size')
-     }
-
-     if (changes.length === 0) {
-      items.push({
-       article_code: row.article_code,
-       ean_code: row.ean_code,
-       description: row.description,
-       account: row.account,
-       unit_size: row.unit_size,
-       status: 'unchanged',
-       existingProduct: existing as never,
-      })
-      unchangedCount++
-     } else if (row.ean_code !== existing.ean_code) {
-      items.push({
-       article_code: row.article_code,
-       ean_code: row.ean_code,
-       description: row.description,
-       account: row.account,
-       unit_size: row.unit_size,
-       status: 'ean_changed',
-       changes,
-       existingProduct: existing as never,
-      })
-      eanChangedCount++
-     } else {
-      items.push({
-       article_code: row.article_code,
-       ean_code: row.ean_code,
-       description: row.description,
-       account: row.account,
-       unit_size: row.unit_size,
-       status: 'updated',
-       changes,
-       existingProduct: existing as never,
-      })
-      updatedCount++
-     }
-    }
-   }
-
-   return {
-    brandId,
-    brandName: brand.name,
-    items,
-    summary: {
-     total: csvRows.length,
-     new: newCount,
-     updated: updatedCount,
-     eanChanged: eanChangedCount,
-     unchanged: unchangedCount,
-    },
-   }
-  } catch (err) {
-   console.error('Error generating CSV preview:', err)
-   errorStore.setError({ error: err as Error, customCode: 500 })
+ ): CsvPreviewData | null => {
+  // Get brand name
+  const brand = brands.value?.find((b) => b.id === brandId)
+  if (!brand) {
+   errorStore.setError({
+    error: new Error('Brand not found'),
+    customCode: 404,
+   })
    return null
+  }
+
+  // Map CSV rows to preview items
+  const items: CsvPreviewItem[] = csvRows.map((row) => ({
+   article_code: row.article_code,
+   ean_code: row.ean_code,
+   description: row.description,
+   account: row.account,
+   unit_size: row.unit_size,
+  }))
+
+  return {
+   brandId,
+   brandName: brand.name,
+   items,
+   summary: {
+    total: csvRows.length,
+   },
   }
  }
 
@@ -292,8 +207,9 @@ export const useMasterProducts = () => {
    return null
   }
 
-  // Refresh list
-  await fetchMasterProducts(brandId)
+  // Refresh list - set brand filter and fetch
+  selectedBrandId.value = brandId
+  await fetchMasterProducts()
   return result
  }
 
@@ -302,10 +218,25 @@ export const useMasterProducts = () => {
   cancelSignal.value.cancelled = true
  }
 
- // Filter products by brand (client-side for quick filtering)
+ // Filter products by brand (server-side filtering)
  const filterByBrand = async (brandId: string | null) => {
   selectedBrandId.value = brandId
-  await fetchMasterProducts(brandId)
+  await fetchMasterProducts()
+ }
+
+ // Set article code filter
+ const setArticleCodeFilter = (value: string) => {
+  articleCodeFilter.value = value
+ }
+
+ // Set EAN code filter
+ const setEanCodeFilter = (value: string) => {
+  eanCodeFilter.value = value
+ }
+
+ // Set description filter
+ const setDescriptionFilter = (value: string) => {
+  descriptionFilter.value = value
  }
 
  // Computed: active products count
@@ -327,6 +258,9 @@ export const useMasterProducts = () => {
   masterProducts,
   brands,
   selectedBrandId,
+  articleCodeFilter,
+  eanCodeFilter,
+  descriptionFilter,
   isLoading,
   uploadProgress,
 
@@ -337,6 +271,9 @@ export const useMasterProducts = () => {
   removeMasterProduct,
   activateMasterProduct,
   filterByBrand,
+  setArticleCodeFilter,
+  setEanCodeFilter,
+  setDescriptionFilter,
   generateCsvPreview,
   applyCsvUpsert,
   cancelUpload,

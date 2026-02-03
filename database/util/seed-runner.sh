@@ -8,11 +8,11 @@ seeds=(
 	# "master_products_seed.js"
 	# "locations_seed.js"
 	# "user_seed.js"
-	"user_profile_seed.js"
+	# "user_profile_seed.js"
 	# "supplier_products_seed.js"
-	# "orders_seed.js"
-	# "order_items_seed.js"
-	# "savings_calculations.seed.js"
+	"orders_seed.js"
+	"order_items_seed.js"
+	"savings_calculations.seed.js"
 )
 
 echo "Starting individual seed execution..."

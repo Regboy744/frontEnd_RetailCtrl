@@ -12,6 +12,10 @@ export interface DataTableConfig {
  pageSize?: number // Rows per page
  searchColumn?: string // Which column to filter (e.g., 'name')
  searchPlaceholder?: string // Custom placeholder text
+ additionalFilters?: {
+  column: string // Column accessor key to filter
+  placeholder: string // Input placeholder text
+ }[]
 }
 
 export interface CustomError extends Error {

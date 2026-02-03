@@ -7,7 +7,7 @@ import type {
  UpsertOptions,
 } from '@/features/masterProducts/types'
 import type { Json } from '@/types/shared/database.types'
-import { chunk, processBatches } from '../utils/array'
+import { chunk } from '../utils/array'
 
 // Batch configuration - adjust these for testing
 const BATCH_CONFIG = {
@@ -115,16 +115,19 @@ export const reactivateMasterProduct = async (id: string) => {
  }
 }
 
-// Bulk upsert master products from CSV with batch processing
+// Bulk insert master products from CSV with batch processing
+// NOTE: Existing products (same brand_id + article_code) are SKIPPED, not updated
+// TODO: Remove ean_history column in future - no longer needed with skip-only logic
 export const upsertMasterProducts = async (
  brandId: string,
  products: CsvRow[],
  options?: UpsertOptions,
 ): Promise<UpsertResult> => {
  const { onProgress, signal } = options || {}
+ const errors: string[] = []
 
  try {
-  // Phase 1: Fetch existing products
+  // Phase 1: Fetch ALL existing products (paginated to handle 1000+ rows)
   onProgress?.({
    phase: 'fetching',
    current: 0,
@@ -132,20 +135,52 @@ export const upsertMasterProducts = async (
    message: 'Fetching existing products...',
   })
 
-  const { data: existingProducts, error: fetchError } = await supabase
-   .from('master_products')
-   .select('id, article_code, ean_code, ean_history')
-   .eq('brand_id', brandId)
+  const allExistingArticleCodes: string[] = []
+  const PAGE_SIZE = 1000
+  let offset = 0
+  let hasMore = true
 
-  if (fetchError) throw fetchError
+  while (hasMore) {
+   // Check for cancellation during fetch
+   if (signal?.cancelled) {
+    return {
+     success: false,
+     inserted: 0,
+     skipped: 0,
+     errors: ['Upload cancelled by user'],
+    }
+   }
+
+   const { data: page, error: fetchError } = await supabase
+    .from('master_products')
+    .select('article_code')
+    .eq('brand_id', brandId)
+    .range(offset, offset + PAGE_SIZE - 1)
+
+   if (fetchError) throw fetchError
+
+   if (page && page.length > 0) {
+    allExistingArticleCodes.push(...page.map((p) => p.article_code))
+    offset += PAGE_SIZE
+    hasMore = page.length === PAGE_SIZE
+   } else {
+    hasMore = false
+   }
+
+   onProgress?.({
+    phase: 'fetching',
+    current: allExistingArticleCodes.length,
+    total: allExistingArticleCodes.length,
+    message: `Fetched ${allExistingArticleCodes.length} existing products...`,
+   })
+  }
 
   // Check for cancellation
   if (signal?.cancelled) {
    return {
     success: false,
     inserted: 0,
-    updated: 0,
-    eanHistoryUpdated: 0,
+    skipped: 0,
     errors: ['Upload cancelled by user'],
    }
   }
@@ -158,45 +193,26 @@ export const upsertMasterProducts = async (
    message: 'Processing CSV rows...',
   })
 
-  const existingMap = new Map(
-   existingProducts?.map((p) => [p.article_code.trim(), p]) || [],
+  const existingSet = new Set(
+   allExistingArticleCodes.map((code) => code.trim()),
   )
 
   const toInsert: MasterProductInsert[] = []
-  const toUpdate: { id: string; data: MasterProductUpdate }[] = []
-  let eanHistoryUpdated = 0
+  let skippedCount = 0
 
   for (let i = 0; i < products.length; i++) {
    const product = products[i]!
-   const existing = existingMap.get(product.article_code.trim())
+   const articleCode = product.article_code.trim()
 
-   if (existing) {
-    // Product exists - check if update needed
-    let eanHistory = (existing.ean_history as string[]) || []
-    const updateData: MasterProductUpdate = {}
-
-    // Check if EAN changed
-    if (product.ean_code !== existing.ean_code) {
-     if (!eanHistory.includes(existing.ean_code)) {
-      eanHistory = [...eanHistory, existing.ean_code]
-      eanHistoryUpdated++
-     }
-     updateData.ean_code = product.ean_code.trim()
-     updateData.ean_history = eanHistory as unknown as Json
-    }
-
-    // Always update other fields
-    updateData.description = product.description.trim()
-    updateData.account = product.account?.trim() || null
-    updateData.unit_size = product.unit_size?.trim() || null
-    updateData.is_active = true
-
-    toUpdate.push({ id: existing.id, data: updateData })
+   if (existingSet.has(articleCode)) {
+    // Product exists - SKIP it
+    skippedCount++
    } else {
-    // New product - insert
+    // New product - add to insert list
+    // TODO: Remove ean_history field when column is removed from database
     toInsert.push({
      brand_id: brandId,
-     article_code: product.article_code.trim(),
+     article_code: articleCode,
      ean_code: product.ean_code.trim(),
      description: product.description.trim(),
      account: product.account?.trim() || null,
@@ -222,109 +238,81 @@ export const upsertMasterProducts = async (
    return {
     success: false,
     inserted: 0,
-    updated: 0,
-    eanHistoryUpdated: 0,
+    skipped: skippedCount,
     errors: ['Upload cancelled by user'],
    }
   }
 
-  // Phase 3: Batch inserts
+  // Phase 3: Batch inserts with per-row error handling
+  let insertedCount = 0
+
   if (toInsert.length > 0) {
    const insertBatches = chunk(toInsert, BATCH_CONFIG.BATCH_SIZE)
-   let processedInserts = 0
 
-   await processBatches(
-    insertBatches,
-    BATCH_CONFIG.CONCURRENCY,
-    async (batch, index) => {
-     // Check for cancellation
-     if (signal?.cancelled) throw new Error('Upload cancelled by user')
+   for (let batchIndex = 0; batchIndex < insertBatches.length; batchIndex++) {
+    // Check for cancellation
+    if (signal?.cancelled) {
+     errors.push('Upload cancelled by user during inserts')
+     break
+    }
 
-     const { error: insertError } = await supabase
-      .from('master_products')
-      .insert(batch)
+    const batch = insertBatches[batchIndex]!
 
-     if (insertError) throw insertError
+    // Try batch insert first (faster)
+    const { error: batchError } = await supabase
+     .from('master_products')
+     .insert(batch)
 
-     processedInserts += batch.length
+    if (!batchError) {
+     // Batch succeeded
+     insertedCount += batch.length
+    } else {
+     // Batch failed - try individual inserts to skip only failing rows
+     for (const product of batch) {
+      const { error: rowError } = await supabase
+       .from('master_products')
+       .insert(product)
 
-     onProgress?.({
-      phase: 'inserting',
-      current: processedInserts,
-      total: toInsert.length,
-      message: `Inserting batch ${index + 1}/${insertBatches.length}...`,
-     })
-    },
-   )
-  }
+      if (rowError) {
+       // Log error and skip this row
+       errors.push(
+        `Failed to insert ${product.article_code}: ${rowError.message}`,
+       )
+      } else {
+       insertedCount++
+      }
+     }
+    }
 
-  // Check for cancellation
-  if (signal?.cancelled) {
-   return {
-    success: false,
-    inserted: toInsert.length, // Already inserted
-    updated: 0,
-    eanHistoryUpdated,
-    errors: ['Upload cancelled by user after inserts'],
+    onProgress?.({
+     phase: 'inserting',
+     current: insertedCount,
+     total: toInsert.length,
+     message: `Inserting batch ${batchIndex + 1}/${insertBatches.length}...`,
+    })
    }
   }
 
-  // Phase 4: Batch updates
-  if (toUpdate.length > 0) {
-   const updateBatches = chunk(toUpdate, BATCH_CONFIG.BATCH_SIZE)
-   let processedUpdates = 0
-
-   await processBatches(
-    updateBatches,
-    BATCH_CONFIG.CONCURRENCY,
-    async (batch, index) => {
-     // Check for cancellation
-     if (signal?.cancelled) throw new Error('Upload cancelled by user')
-
-     // Process updates in this batch sequentially
-     // (Supabase doesn't support bulk updates by ID easily)
-     for (const { id, data } of batch) {
-      const { error: updateError } = await supabase
-       .from('master_products')
-       .update(data)
-       .eq('id', id)
-
-      if (updateError) throw updateError
-     }
-
-     processedUpdates += batch.length
-
-     onProgress?.({
-      phase: 'updating',
-      current: processedUpdates,
-      total: toUpdate.length,
-      message: `Updating batch ${index + 1}/${updateBatches.length}...`,
-     })
-    },
-   )
-  }
-
-  // Phase 5: Complete
+  // Phase 4: Complete
   onProgress?.({
    phase: 'complete',
-   current: toInsert.length + toUpdate.length,
-   total: toInsert.length + toUpdate.length,
+   current: insertedCount,
+   total: toInsert.length,
    message: 'Upload complete!',
   })
 
   return {
-   success: true,
-   inserted: toInsert.length,
-   updated: toUpdate.length,
-   eanHistoryUpdated,
+   success: errors.length === 0,
+   inserted: insertedCount,
+   skipped: skippedCount,
+   errors: errors.length > 0 ? errors : undefined,
   }
  } catch (err) {
-  console.error('Error upserting master products:', err)
+  console.error('Error inserting master products:', err)
   return {
    success: false,
    inserted: 0,
-   updated: 0,
-   eanHistoryUpdated: 0,
+   skipped: 0,
    errors: [err instanceof Error ? err.message : 'Unknown error'],
   }
  }

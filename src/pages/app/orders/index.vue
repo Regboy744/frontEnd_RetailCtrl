@@ -94,12 +94,10 @@ const tableConfig: DataTableConfig = {
   rowSelection: false,
   pagination: true,
   sorting: true,
-  filtering: true,
+  filtering: false,
   columnVisibility: true,
  },
  pageSize: 20,
- searchColumn: 'id',
- searchPlaceholder: 'Search by order ID...',
 }
 
 // Table columns

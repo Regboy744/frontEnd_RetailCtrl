@@ -9,6 +9,9 @@ import { useAuthStore } from '@/stores/auth'
 // Import the main.css - Required to make tailwind work
 import './assets/main.css'
 
+// Import vue-sonner styles for toast notifications
+import 'vue-sonner/style.css'
+
 const app = createApp(App)
 const pinia = createPinia()
 

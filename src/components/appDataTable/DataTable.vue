@@ -76,6 +76,7 @@ const searchColumn = computed(() => props.config?.searchColumn ?? 'name')
 const searchPlaceholder = computed(
  () => props.config?.searchPlaceholder ?? 'Search...',
 )
+const additionalFilters = computed(() => props.config?.additionalFilters ?? [])
 
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
@@ -162,6 +163,16 @@ const table = useVueTable({
      :placeholder="searchPlaceholder"
      :model-value="table.getColumn(searchColumn)?.getFilterValue() as string"
      @update:model-value="table.getColumn(searchColumn)?.setFilterValue($event)"
+    />
+    <Input
+     v-for="filter in additionalFilters"
+     :key="filter.column"
+     class="max-w-2xs"
+     :placeholder="filter.placeholder"
+     :model-value="table.getColumn(filter.column)?.getFilterValue() as string"
+     @update:model-value="
+      table.getColumn(filter.column)?.setFilterValue($event)
+     "
     />
     <DropdownMenu v-if="features.columnVisibility">
      <DropdownMenuTrigger as-child>
