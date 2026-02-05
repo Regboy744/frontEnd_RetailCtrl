@@ -326,7 +326,7 @@ onMounted(() => {
             {{ item.description }}
            </div>
            <div class="text-xs text-muted-foreground font-mono">
-            {{ item.supplier_product_code }}
+            {{ item.article_code }}
            </div>
           </TableCell>
           <TableCell class="text-center">

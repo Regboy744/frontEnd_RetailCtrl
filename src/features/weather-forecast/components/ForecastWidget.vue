@@ -74,7 +74,6 @@ const {
  forecast,
  isLoading,
  error,
- location,
  loadWeatherForecast,
  refreshForecast,
  usingFallback,
@@ -148,17 +147,18 @@ const averageHumidity = computed(() => {
 
 // Current temp from the first forecast point (most recent/current)
 const currentTemp = computed(() => {
- // Use the first forecast point for current temperature
- if (forecast.value.length > 0) {
-  return Math.round(forecast.value[0].temperature)
+ const firstPoint = forecast.value[0]
+ if (firstPoint) {
+  return Math.round(firstPoint.temperature)
  }
  return forecastDays.value[0] ? Math.round(forecastDays.value[0].maxTemp) : 0
 })
 
 // Current weather symbol from first forecast point
 const currentSymbol = computed(() => {
- if (forecast.value.length > 0) {
-  return forecast.value[0].symbol
+ const firstPoint = forecast.value[0]
+ if (firstPoint) {
+  return firstPoint.symbol
  }
  return forecastDays.value[0]?.symbols?.[0] || 'Unknown'
 })

@@ -435,6 +435,10 @@ export interface OrderItemRequest {
  quantity: number
  product_name?: string
  product_id?: string // Required for Savage & Whitten
+ // Fields required for database persistence
+ master_product_id: string
+ unit_price: number // Supplier price
+ baseline_unit_price: number // Original order price
 }
 
 export interface SupplierOrderRequest {

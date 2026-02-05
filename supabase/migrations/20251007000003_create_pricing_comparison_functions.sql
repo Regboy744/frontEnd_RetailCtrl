@@ -62,8 +62,9 @@ RETURNS TABLE (
     is_special_price BOOLEAN,
     special_price_notes TEXT,
     valid_until TIMESTAMPTZ,
-    availability_status TEXT
+    availability_status TEXT,
     supplier_product_code TEXT
+    internal_product_id TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -81,8 +82,9 @@ BEGIN
         (scp.negotiated_price IS NOT NULL) as is_special_price,
         scp.notes,
         scp.valid_until,
-        sp.availability_status
+        sp.availability_status,
         sp.supplier_product_code
+        sp.internal_product_id
     FROM master_products mp
     JOIN supplier_products sp ON sp.master_product_id = mp.id
     JOIN suppliers s ON s.id = sp.supplier_id

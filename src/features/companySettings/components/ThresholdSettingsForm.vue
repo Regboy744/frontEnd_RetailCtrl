@@ -47,12 +47,17 @@ const handleActiveToggle = (supplierId: string, value: boolean) => {
  updateLocalSetting(supplierId, 'is_active', value)
 }
 
+const handleSpecialPricingToggle = (supplierId: string, value: boolean) => {
+ updateLocalSetting(supplierId, 'special_pricing_enabled', value)
+}
+
 // Save all settings
 const handleSaveAll = async () => {
  const settings: ThresholdSettingFormData[] = suppliersWithSettings.value.map(
   (s) => ({
    supplier_id: s.supplier_id,
    threshold_percentage: s.threshold_percentage,
+   special_pricing_enabled: s.special_pricing_enabled,
    is_active: s.is_active,
   }),
  )
@@ -88,8 +93,9 @@ const hasSuppliers = computed(() => suppliersWithSettings.value.length > 0)
    <TableHeader>
     <TableRow>
      <TableHead class="w-[50%]">Supplier</TableHead>
-     <TableHead class="w-[30%] text-center">Threshold %</TableHead>
-     <TableHead class="w-[20%] text-center">Active</TableHead>
+     <TableHead class="w-[25%] text-center">Threshold %</TableHead>
+     <TableHead class="w-[15%] text-center">Special Pricing</TableHead>
+     <TableHead class="w-[10%] text-center">Active</TableHead>
     </TableRow>
    </TableHeader>
    <TableBody>
@@ -115,6 +121,15 @@ const hasSuppliers = computed(() => suppliersWithSettings.value.length > 0)
        />
        <span class="text-muted-foreground">%</span>
       </div>
+     </TableCell>
+     <TableCell class="text-center">
+      <Switch
+       :model-value="supplier.special_pricing_enabled"
+       :disabled="!supplier.is_active"
+       @update:model-value="
+        (val) => handleSpecialPricingToggle(supplier.supplier_id, val)
+       "
+      />
      </TableCell>
      <TableCell class="text-center">
       <Switch

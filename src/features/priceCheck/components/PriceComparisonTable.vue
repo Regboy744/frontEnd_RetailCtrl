@@ -34,7 +34,6 @@ import {
  Check,
  CheckCircle2,
  ChevronRight,
- CornerDownRight,
  Info,
  Minus,
  Search,

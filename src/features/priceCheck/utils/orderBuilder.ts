@@ -32,6 +32,10 @@ export function buildOrderPayload(
    supplier_product_code: selection.supplier_product_code,
    quantity: selection.quantity,
    product_name: selection.description,
+   // Fields for database persistence
+   master_product_id: selection.product_id,
+   unit_price: selection.supplier_unit_price,
+   baseline_unit_price: selection.order_unit_price,
   }
 
   // Add internal_product_id if available (required for S&W)

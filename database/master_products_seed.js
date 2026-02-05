@@ -135,7 +135,7 @@ const seedMasterProduct = async (numEntriesPerBrand) => {
    })
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
    .from('master_products')
    .insert(masterProducts)
 

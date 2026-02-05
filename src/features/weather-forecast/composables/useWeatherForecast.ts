@@ -188,13 +188,18 @@ export function useWeatherForecast() {
   }
 
   // Clean up internal tracking properties before returning
-  return Array.from(days.values()).map(
-   ({ _windSum, _humiditySum, _count, ...day }) => ({
-    ...day,
-    avgWind: Math.round(day.avgWind * 10) / 10,
-    avgHumidity: Math.round(day.avgHumidity),
-   }),
-  )
+  return Array.from(days.values()).map((day) => {
+   const clean = { ...day }
+   delete (clean as { _windSum?: number })._windSum
+   delete (clean as { _humiditySum?: number })._humiditySum
+   delete (clean as { _count?: number })._count
+
+   return {
+    ...clean,
+    avgWind: Math.round(clean.avgWind * 10) / 10,
+    avgHumidity: Math.round(clean.avgHumidity),
+   }
+  })
  })
 
  // Refresh forecast (re-fetch with existing location)

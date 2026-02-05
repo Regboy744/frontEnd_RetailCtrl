@@ -19,6 +19,7 @@ export interface SupplierWithSetting {
  supplier_name: string
  setting_id: string | null // null if no setting exists yet
  threshold_percentage: number
+ special_pricing_enabled: boolean
  is_active: boolean
 }
 
@@ -26,5 +27,6 @@ export interface SupplierWithSetting {
 export interface ThresholdSettingFormData {
  supplier_id: string
  threshold_percentage: number
+ special_pricing_enabled: boolean
  is_active: boolean
 }

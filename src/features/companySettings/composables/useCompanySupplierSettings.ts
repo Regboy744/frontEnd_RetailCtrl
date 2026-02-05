@@ -56,6 +56,7 @@ export const useCompanySupplierSettings = (companyId: Ref<string>) => {
      supplier_name: supplier.name,
      setting_id: existingSetting?.id ?? null,
      threshold_percentage: existingSetting?.threshold_percentage ?? 0,
+     special_pricing_enabled: existingSetting?.special_pricing_enabled ?? false,
      is_active: existingSetting?.is_active ?? true,
     }
    })
@@ -91,7 +92,7 @@ export const useCompanySupplierSettings = (companyId: Ref<string>) => {
  // Update local state (for reactive UI before save)
  const updateLocalSetting = (
   supplierId: string,
-  field: 'threshold_percentage' | 'is_active',
+  field: 'threshold_percentage' | 'special_pricing_enabled' | 'is_active',
   value: number | boolean,
  ) => {
   const setting = suppliersWithSettings.value.find(
@@ -100,9 +101,15 @@ export const useCompanySupplierSettings = (companyId: Ref<string>) => {
   if (setting) {
    if (field === 'threshold_percentage') {
     setting.threshold_percentage = value as number
-   } else {
-    setting.is_active = value as boolean
+    return
    }
+
+   if (field === 'special_pricing_enabled') {
+    setting.special_pricing_enabled = value as boolean
+    return
+   }
+
+   setting.is_active = value as boolean
   }
  }
 

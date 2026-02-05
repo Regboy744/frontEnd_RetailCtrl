@@ -78,6 +78,7 @@ const seedSupplierProducts = async () => {
      length: 8,
      casing: 'upper',
     }),
+    internal_product_id: faker.string.numeric(8),
     current_price: currentPrice,
     vat_rate: faker.helpers.arrayElement([0.0, 0.09, 0.135, 0.23]),
     availability_status:

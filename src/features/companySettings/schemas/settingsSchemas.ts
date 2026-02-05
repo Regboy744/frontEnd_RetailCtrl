@@ -7,6 +7,7 @@ export const thresholdSettingSchema = z.object({
   .number()
   .min(0, 'Threshold must be at least 0%')
   .max(100, 'Threshold must not exceed 100%'),
+ special_pricing_enabled: z.boolean(),
  is_active: z.boolean(),
 })
 

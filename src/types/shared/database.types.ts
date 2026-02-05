@@ -151,6 +151,7 @@ export type Database = {
      created_at: string | null
      id: string
      is_active: boolean | null
+     special_pricing_enabled: boolean | null
      supplier_id: string
      threshold_percentage: number
      updated_at: string | null
@@ -160,6 +161,7 @@ export type Database = {
      created_at?: string | null
      id?: string
      is_active?: boolean | null
+     special_pricing_enabled?: boolean | null
      supplier_id: string
      threshold_percentage?: number
      updated_at?: string | null
@@ -169,6 +171,7 @@ export type Database = {
      created_at?: string | null
      id?: string
      is_active?: boolean | null
+     special_pricing_enabled?: boolean | null
      supplier_id?: string
      threshold_percentage?: number
      updated_at?: string | null

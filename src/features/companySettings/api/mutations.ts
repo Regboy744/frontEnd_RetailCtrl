@@ -12,6 +12,7 @@ export const upsertThresholdSettings = async (
    company_id: companyId,
    supplier_id: setting.supplier_id,
    threshold_percentage: setting.threshold_percentage,
+   special_pricing_enabled: setting.special_pricing_enabled,
    is_active: setting.is_active,
   }))
 
@@ -41,6 +42,7 @@ export const updateThresholdSetting = async (
    .from('company_supplier_settings')
    .update({
     threshold_percentage: data.threshold_percentage,
+    special_pricing_enabled: data.special_pricing_enabled,
     is_active: data.is_active,
    })
    .eq('id', settingId)
