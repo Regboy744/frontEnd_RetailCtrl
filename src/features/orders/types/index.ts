@@ -138,4 +138,6 @@ export interface LocationOption {
  id: string
  name: string
  location_number: number
+ company_id?: string
+ company_name?: string
 }

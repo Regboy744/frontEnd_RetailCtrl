@@ -7,6 +7,7 @@ import Button from '@/components/ui/button/Button.vue'
 import { Badge } from '@/components/ui/badge'
 import { Download, Eye, SlidersHorizontal } from 'lucide-vue-next'
 import { useOrders } from '@/features/orders/composables/useOrders'
+import { useAuthStore } from '@/stores/auth'
 import OrderStats from '@/features/orders/components/OrderStats.vue'
 import OrderFilters from '@/features/orders/components/OrderFilters.vue'
 import OrderDetailSheet from '@/features/orders/components/OrderDetailSheet.vue'
@@ -15,8 +16,8 @@ import type { OrderWithLocation } from '@/features/orders/types'
 
 // Composable
 const {
- companies,
  locations,
+ locationsByCompany,
  orders,
  orderDetail,
  filters,
@@ -24,15 +25,20 @@ const {
  isLoading,
  isLoadingLocations,
  isLoadingDetail,
- fetchCompanies,
  fetchOrderDetail,
  updateFilters,
  resetFilters,
  applyDatePreset,
+ initialize,
 } = useOrders()
 
-// Fetch companies on mount
-await fetchCompanies()
+const authStore = useAuthStore()
+
+const isManager = computed(() => authStore.userRole === 'manager')
+const allowAllLocations = computed(() => !isManager.value)
+
+// Initialize orders view
+await initialize()
 
 // Detail sheet state
 const detailSheetOpen = ref(false)
@@ -64,11 +70,11 @@ const formatDate = (dateString: string | null): string => {
 const getStatusBadge = (status: string | null) => {
  switch (status) {
   case 'pending':
-   return { variant: 'secondary' as const, class: 'bg-yellow-500' }
+   return { variant: 'secondary' as const, class: 'bg-warning' }
   case 'confirmed':
-   return { variant: 'default' as const, class: 'bg-blue-500' }
+   return { variant: 'default' as const, class: 'bg-primary' }
   case 'delivered':
-   return { variant: 'default' as const, class: 'bg-green-500' }
+   return { variant: 'default' as const, class: 'bg-success' }
   case 'cancelled':
    return { variant: 'destructive' as const, class: '' }
   default:
@@ -206,10 +212,12 @@ const columns: ColumnDef<OrderWithLocation>[] = [
  },
 ]
 
-// Show message when no company is selected
-const showSelectCompanyMessage = computed(() => {
+const showSelectLocationMessage = computed(() => {
  return (
-  !filters.value.companyId && orders.value.length === 0 && !isLoading.value
+  isManager.value &&
+  !filters.value.locationId &&
+  orders.value.length === 0 &&
+  !isLoading.value
  )
 })
 </script>
@@ -226,9 +234,11 @@ const showSelectCompanyMessage = computed(() => {
    <div v-show="filtersOpen" class="min-w-64">
     <OrderFilters
      :filters="filters"
-     :companies="companies || []"
      :locations="locations || []"
+     :locations-by-company="locationsByCompany"
      :is-loading-locations="isLoadingLocations"
+     :is-location-locked="isManager"
+     :allow-all-locations="allowAllLocations"
      @update:filters="updateFilters"
      @apply-preset="applyDatePreset"
      @reset="resetFilters"
@@ -260,17 +270,17 @@ const showSelectCompanyMessage = computed(() => {
 
     <!-- Stats Cards (expand to fill) -->
     <div class="flex-1">
-     <OrderStats :stats="orderStats" />
+     <OrderStats :stats="orderStats" :is-loading="isLoading" />
     </div>
    </div>
 
-   <!-- Select Company Message -->
+   <!-- Select Location Message -->
    <div
-    v-if="showSelectCompanyMessage"
+    v-if="showSelectLocationMessage"
     class="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg"
    >
     <p class="text-lg font-medium text-muted-foreground mb-2">
-     Select a company to view orders
+     Select a location to view orders
     </p>
     <p class="text-sm text-muted-foreground">
      Click the filter icon to get started

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, toRef } from 'vue'
+import { computed, onUnmounted, ref, toRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +25,8 @@ import {
 import { useCompanyDetail } from '@/features/companies/composables/useCompanyDetail'
 import { useCompanyAddress } from '@/features/addresses/composables/useCompanyAddress'
 import { usePageTitleStore } from '@/stores/pageTitle'
+import { useAuthStore } from '@/stores/auth'
+import { useErrorStore } from '@/stores/error'
 import SharedSheet from '@/components/shared/SharedSheet.vue'
 import CompanyEditForm from '@/features/companies/components/CompanyEditForm.vue'
 import AddressCard from '@/features/addresses/components/AddressCard.vue'
@@ -35,6 +37,8 @@ import type { CompanyFormData } from '@/features/companies/types'
 const route = useRoute('/app/companies/[id]')
 const router = useRouter()
 const pageTitleStore = usePageTitleStore()
+const authStore = useAuthStore()
+const errorStore = useErrorStore()
 
 const companyId = computed(() => route.params.id as string)
 const companyIdRef = toRef(companyId)
@@ -50,18 +54,62 @@ const {
  removeAddress,
 } = useCompanyAddress(companyIdRef)
 
-// Fetch company and address data
-await Promise.all([fetchCompany(), fetchAddress()])
+const isReadOnly = computed(
+ () => authStore.userRole === 'admin' || authStore.userRole === 'manager',
+)
 
-// Set breadcrumb
-if (company.value?.name) {
- pageTitleStore.setBreadcrumbLabel(company.value.name)
+const hasFetched = ref(false)
+const hasRedirected = ref(false)
+
+const handleForbidden = (message: string) => {
+ if (hasRedirected.value) return
+ errorStore.setError({ error: message, customCode: 403 })
+ hasRedirected.value = true
+ router.push('/app/companies/error/forbidden')
+}
+
+const loadCompanyData = async () => {
+ if (hasFetched.value) return
+ hasFetched.value = true
+ await Promise.all([fetchCompany(), fetchAddress()])
+
+ if (company.value?.name) {
+  pageTitleStore.setBreadcrumbLabel(company.value.name)
+ }
 }
 
 // Clear breadcrumb on unmount
 onUnmounted(() => {
  pageTitleStore.clearBreadcumbLabel()
 })
+
+watch(
+ () => companyId.value,
+ () => {
+  hasFetched.value = false
+  hasRedirected.value = false
+ },
+)
+
+watch(
+ () => [isReadOnly.value, authStore.companyId, companyId.value],
+ async () => {
+  if (isReadOnly.value) {
+   if (!authStore.companyId) {
+    handleForbidden('Your account is not linked to a company.')
+    return
+   }
+
+   if (authStore.companyId !== companyId.value) {
+    handleForbidden('You do not have access to this company.')
+    return
+   }
+  }
+
+  await loadCompanyData()
+ },
+ { immediate: true },
+)
 
 // Computed values for display
 const brandDisplay = computed(() => {
@@ -158,6 +206,7 @@ function goBack() {
         <CardDescription>Basic company details</CardDescription>
        </div>
        <SharedSheet
+        v-if="!isReadOnly"
         trigger-label="Edit"
         :trigger-icon="false"
         title="Edit Company"
@@ -215,6 +264,7 @@ function goBack() {
      <AddressCard
       :address="address"
       :is-loading="isAddressLoading"
+      :read-only="isReadOnly"
       @save="handleAddressSave"
       @delete="handleAddressDelete"
      />
@@ -273,7 +323,11 @@ function goBack() {
      </CardHeader>
      <CardContent>
       <Suspense>
-       <LocationsList :company-id="companyId" />
+       <LocationsList
+        :company-id="companyId"
+        :read-only="isReadOnly"
+        :allow-credentials="true"
+       />
        <template #fallback>
         <div class="flex items-center justify-center py-12">
          <div
@@ -337,7 +391,7 @@ function goBack() {
         Company-specific negotiated prices with suppliers
        </CardDescription>
       </div>
-      <Button>
+      <Button v-if="!isReadOnly">
        <DollarSign class="h-4 w-4 mr-2" />
        Add Special Price
       </Button>
@@ -350,7 +404,7 @@ function goBack() {
        <p class="text-sm text-muted-foreground mb-4">
         Add negotiated prices that override default supplier prices
        </p>
-       <Button variant="outline">
+       <Button v-if="!isReadOnly" variant="outline">
         <DollarSign class="h-4 w-4 mr-2" />
         Add First Special Price
        </Button>

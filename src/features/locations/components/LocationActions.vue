@@ -8,9 +8,14 @@ import { Button } from '@/components/ui/button'
 
 interface Props {
  location: Location
+ readOnly?: boolean
+ allowCredentials?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+ readOnly: false,
+ allowCredentials: true,
+})
 
 const emit = defineEmits<{
  save: [data: LocationFormData]
@@ -29,6 +34,7 @@ const handleDelete = () => {
  <div class="flex justify-center items-center gap-2">
   <!-- Credentials button opens sheet -->
   <SharedSheet
+   v-if="allowCredentials"
    title="Supplier Credentials"
    :description="`Manage login credentials for ${location.name}`"
   >
@@ -47,7 +53,11 @@ const handleDelete = () => {
   </SharedSheet>
 
   <!-- Edit button opens sheet -->
-  <SharedSheet title="Edit Location" description="Edit location details">
+  <SharedSheet
+   v-if="!readOnly"
+   title="Edit Location"
+   description="Edit location details"
+  >
    <template #trigger>
     <Button variant="ghost" class="w-8 h-8 p-0">
      <Edit class="w-4 h-4 text-green-400" />
@@ -67,7 +77,12 @@ const handleDelete = () => {
   </SharedSheet>
 
   <!-- Delete button -->
-  <Button variant="ghost" class="w-8 h-8 p-0" @click="handleDelete">
+  <Button
+   v-if="!readOnly"
+   variant="ghost"
+   class="w-8 h-8 p-0"
+   @click="handleDelete"
+  >
    <Trash class="w-4 h-4 text-red-500" />
   </Button>
  </div>

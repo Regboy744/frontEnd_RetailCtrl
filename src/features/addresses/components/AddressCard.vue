@@ -15,9 +15,13 @@ import type { Address, AddressFormData } from '@/features/addresses/types'
 interface Props {
  address: Address | null
  isLoading?: boolean
+ readOnly?: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+ isLoading: false,
+ readOnly: false,
+})
 
 const emit = defineEmits<{
  save: [data: AddressFormData]
@@ -38,7 +42,7 @@ const formatAddressType = (type: string) => {
     <CardTitle class="text-lg">Address</CardTitle>
     <CardDescription>Company headquarters location</CardDescription>
    </div>
-   <div v-if="address" class="flex items-center gap-2">
+   <div v-if="address && !readOnly" class="flex items-center gap-2">
     <SharedSheet
      trigger-label="Edit"
      :trigger-icon="false"
@@ -104,6 +108,7 @@ const formatAddressType = (type: string) => {
     <MapPin class="h-10 w-10 text-muted-foreground mb-3" />
     <p class="text-sm text-muted-foreground mb-4">No address added yet</p>
     <SharedSheet
+     v-if="!readOnly"
      trigger-label="Add Address"
      title="Add Address"
      description="Add company address information"

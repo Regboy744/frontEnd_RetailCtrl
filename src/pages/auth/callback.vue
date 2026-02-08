@@ -119,20 +119,20 @@ onMounted(async () => {
 
 <template>
  <div
-  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4"
+  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary to-background px-4"
  >
   <!-- Background decorations -->
   <div class="absolute inset-0 overflow-hidden">
    <div
-    class="absolute top-20 left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"
+    class="absolute top-20 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl"
    ></div>
    <div
-    class="absolute bottom-20 right-10 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"
+    class="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
    ></div>
   </div>
 
   <Card
-   class="w-full max-w-md backdrop-blur-lg bg-slate-800/50 border-slate-700 relative z-10"
+   class="w-full max-w-md backdrop-blur-lg bg-card/50 border-border relative z-10"
   >
    <CardContent
     class="flex flex-col items-center justify-center py-12 space-y-6"
@@ -142,10 +142,10 @@ onMounted(async () => {
      v-if="status === 'loading'"
      class="flex flex-col items-center space-y-4"
     >
-     <div class="p-4 bg-blue-500/10 rounded-full">
-      <Loader2 class="w-8 h-8 text-blue-400 animate-spin" />
+     <div class="p-4 bg-primary/10 rounded-full">
+      <Loader2 class="w-8 h-8 text-primary animate-spin" />
      </div>
-     <p class="text-slate-300 text-center">{{ message }}</p>
+     <p class="text-foreground/80 text-center">{{ message }}</p>
     </div>
 
     <!-- Success State -->
@@ -153,10 +153,10 @@ onMounted(async () => {
      v-else-if="status === 'success'"
      class="flex flex-col items-center space-y-4"
     >
-     <div class="p-4 bg-green-500/10 rounded-full">
-      <CheckCircle2 class="w-8 h-8 text-green-400" />
+     <div class="p-4 bg-success/10 rounded-full">
+      <CheckCircle2 class="w-8 h-8 text-success" />
      </div>
-     <p class="text-green-400 text-center">{{ message }}</p>
+     <p class="text-success text-center">{{ message }}</p>
     </div>
 
     <!-- Error State -->
@@ -164,13 +164,13 @@ onMounted(async () => {
      v-else-if="status === 'error'"
      class="flex flex-col items-center space-y-4"
     >
-     <div class="p-4 bg-red-500/10 rounded-full">
-      <XCircle class="w-8 h-8 text-red-400" />
+     <div class="p-4 bg-destructive/10 rounded-full">
+      <XCircle class="w-8 h-8 text-destructive" />
      </div>
-     <p class="text-red-400 text-center">{{ message }}</p>
+     <p class="text-destructive text-center">{{ message }}</p>
      <RouterLink
       to="/auth/login"
-      class="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+      class="text-sm text-primary hover:text-primary/80 transition-colors"
      >
       Return to login
      </RouterLink>

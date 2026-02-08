@@ -18,8 +18,8 @@ const PERMISSIONS: Record<string, readonly UserRole[]> = {
  'companies:delete': ['master'],
 
  // User management
- 'users:read': ['master', 'admin'],
- 'users:write': ['master', 'admin'],
+ 'users:read': ['master'],
+ 'users:write': ['master'],
  'users:delete': ['master'],
 
  // Location management
@@ -28,7 +28,7 @@ const PERMISSIONS: Record<string, readonly UserRole[]> = {
  'locations:delete': ['master', 'admin'],
 
  // Supplier management
- 'suppliers:read': ['master', 'admin', 'manager'],
+ 'suppliers:read': ['master'],
  'suppliers:write': ['master'],
  'suppliers:delete': ['master'],
 

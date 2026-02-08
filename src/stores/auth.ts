@@ -35,6 +35,9 @@ export const useAuthStore = defineStore('auth-store', () => {
  const error = ref<string | null>(null)
  const lastActivity = ref<number>(Date.now())
  const failedAttempts = ref(0)
+ const backoffUntil = ref(0)
+ const backoffNow = ref(Date.now())
+ let backoffTimer: ReturnType<typeof setInterval> | null = null
 
  // Getters
  const isAuthenticated = computed(() => !!session.value && !!user.value)
@@ -117,11 +120,52 @@ export const useAuthStore = defineStore('auth-store', () => {
   return 'U'
  })
 
+ const updateBackoffNow = (): void => {
+  backoffNow.value = Date.now()
+  if (backoffUntil.value > 0 && backoffNow.value >= backoffUntil.value) {
+   backoffUntil.value = 0
+   if (backoffTimer) {
+    clearInterval(backoffTimer)
+    backoffTimer = null
+   }
+  }
+ }
+
+ const startBackoffTimer = (): void => {
+  if (backoffTimer) return
+  backoffTimer = setInterval(updateBackoffNow, 1000)
+ }
+
+ const stopBackoffTimer = (): void => {
+  if (!backoffTimer) return
+  clearInterval(backoffTimer)
+  backoffTimer = null
+ }
+
+ const setBackoff = (delayMs: number): void => {
+  if (delayMs <= 0) {
+   backoffUntil.value = 0
+   stopBackoffTimer()
+   return
+  }
+
+  backoffUntil.value = Date.now() + delayMs
+  updateBackoffNow()
+  startBackoffTimer()
+ }
+
  // Calculate backoff delay based on failed attempts
- const getBackoffDelay = (): number => {
-  if (failedAttempts.value === 0) return 0
-  const delay = BASE_BACKOFF_DELAY_MS * Math.pow(2, failedAttempts.value - 1)
+ const getBackoffDelayForAttempt = (attempts: number): number => {
+  if (attempts <= 0) return 0
+  const delay = BASE_BACKOFF_DELAY_MS * Math.pow(2, attempts - 1)
   return Math.min(delay, MAX_BACKOFF_DELAY_MS)
+ }
+
+ // Remaining backoff time in milliseconds
+ const getBackoffDelay = (): number => {
+  if (backoffUntil.value <= 0) return 0
+  const remaining = backoffUntil.value - backoffNow.value
+  return Math.max(0, remaining)
  }
 
  // Fetch user profile from database
@@ -220,6 +264,7 @@ export const useAuthStore = defineStore('auth-store', () => {
 
    if (signInError) {
     failedAttempts.value++
+    setBackoff(getBackoffDelayForAttempt(failedAttempts.value))
 
     // Handle specific error cases
     if (signInError.status === 429) {
@@ -235,6 +280,7 @@ export const useAuthStore = defineStore('auth-store', () => {
 
    // Reset failed attempts on success
    failedAttempts.value = 0
+   setBackoff(0)
 
    // Store remember me preference
    localStorage.setItem(STORAGE_KEYS.REMEMBER_ME, rememberMe.toString())
@@ -254,6 +300,7 @@ export const useAuthStore = defineStore('auth-store', () => {
    return { success: true }
   } catch (err) {
    failedAttempts.value++
+   setBackoff(getBackoffDelayForAttempt(failedAttempts.value))
    const errorMessage =
     err instanceof Error ? err.message : 'An unexpected error occurred'
    error.value = errorMessage
@@ -292,6 +339,7 @@ export const useAuthStore = defineStore('auth-store', () => {
   profile.value = null
   error.value = null
   failedAttempts.value = 0
+  setBackoff(0)
   localStorage.removeItem(STORAGE_KEYS.REMEMBER_ME)
   localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVITY)
  }

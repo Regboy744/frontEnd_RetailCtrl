@@ -28,18 +28,25 @@ const {
 
 const { reset: resetOrderSubmission } = useOrderSubmission()
 
-// Track company ID from upload
+// Track company/location IDs from upload
 const currentCompanyId = ref<string>('')
+const currentLocationId = ref<string>('')
 
-const handleUpload = async (data: { file: File; companyId: string }) => {
+const handleUpload = async (data: {
+ file: File
+ locationId: string
+ companyId: string
+}) => {
  currentCompanyId.value = data.companyId
- await checkPrices(data.file, data.companyId)
+ currentLocationId.value = data.locationId
+ await checkPrices(data.file, data.locationId, data.companyId)
 }
 
 const handleClearResults = () => {
  clearResults()
  resetOrderSubmission()
  currentCompanyId.value = ''
+ currentLocationId.value = ''
 }
 </script>
 
@@ -141,6 +148,7 @@ const handleClearResults = () => {
    v-if="hasResults"
    :suppliers="suppliers"
    :company-id="currentCompanyId"
+   :location-id="currentLocationId"
   />
   <OrderResultsDialog />
  </div>

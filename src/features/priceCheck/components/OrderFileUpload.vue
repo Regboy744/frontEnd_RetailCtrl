@@ -5,16 +5,28 @@ import {
  Select,
  SelectContent,
  SelectGroup,
+ SelectLabel,
  SelectItem,
  SelectTrigger,
  SelectValue,
 } from '@/components/ui/select'
-import { Upload, FileSpreadsheet, X, Loader2, Building2 } from 'lucide-vue-next'
+import {
+ Upload,
+ FileSpreadsheet,
+ X,
+ Loader2,
+ Building2,
+ MapPin,
+} from 'lucide-vue-next'
 import { supabase } from '@/lib/supabaseClient'
+import { useAuthStore } from '@/stores/auth'
 
-interface Company {
+interface LocationOption {
  id: string
  name: string
+ location_number: number
+ company_id: string
+ company_name?: string
 }
 
 interface Props {
@@ -24,23 +36,42 @@ interface Props {
 defineProps<Props>()
 
 const emit = defineEmits<{
- upload: [data: { file: File; companyId: string }]
+ upload: [data: { file: File; locationId: string; companyId: string }]
 }>()
 
+const authStore = useAuthStore()
+
 // State
-const companies = ref<Company[]>([])
-const selectedCompanyId = ref<string>('')
+const locations = ref<LocationOption[]>([])
+const locationsByCompany = ref<Map<string, LocationOption[]>>(new Map())
+const selectedLocationId = ref<string>('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const fileError = ref<string | null>(null)
 const isLoadingCompanies = ref(false)
+const locationError = ref<string | null>(null)
 
-// Get dev company ID from environment
-const devCompanyId = import.meta.env.VITE_DEV_COMPANY_ID || ''
+const selectedLocation = computed(
+ () => locations.value.find((l) => l.id === selectedLocationId.value) || null,
+)
+
+const selectedCompanyName = computed(
+ () => selectedLocation.value?.company_name || 'Unknown company',
+)
+
+const selectedCompanyId = computed(
+ () => selectedLocation.value?.company_id || '',
+)
 
 // Computed
 const canUpload = computed(() => {
- return selectedCompanyId.value && selectedFile.value && !fileError.value
+ return (
+  selectedLocationId.value &&
+  selectedCompanyId.value &&
+  selectedFile.value &&
+  !fileError.value &&
+  !locationError.value
+ )
 })
 
 const fileSizeFormatted = computed(() => {
@@ -51,25 +82,153 @@ const fileSizeFormatted = computed(() => {
  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 })
 
-// Fetch companies on mount
+const isLocationLocked = computed(
+ () => authStore.userRole === 'manager' && locations.value.length === 1,
+)
+
+// Fetch locations on mount
 onMounted(async () => {
  isLoadingCompanies.value = true
  try {
+  const role = authStore.userRole
+
+  if (role === 'manager') {
+   if (!authStore.locationId) {
+    locationError.value = 'Your account is not linked to a location.'
+    return
+   }
+
+   const { data, error } = await supabase
+    .from('locations')
+    .select(
+     `
+      id,
+      name,
+      location_number,
+      company_id,
+      company:companies(id, name)
+     `,
+    )
+    .eq('id', authStore.locationId)
+    .single()
+
+   if (error) throw error
+   if (!data) {
+    locationError.value = 'Your location could not be found.'
+    return
+   }
+
+   const companyData = data.company as { id: string; name: string } | null
+   const location: LocationOption = {
+    id: data.id,
+    name: data.name,
+    location_number: data.location_number,
+    company_id: data.company_id,
+    company_name: companyData?.name || 'Unknown company',
+   }
+
+   locations.value = [location]
+   selectedLocationId.value = location.id
+   return
+  }
+
+  if (role === 'admin') {
+   if (!authStore.companyId) {
+    locationError.value = 'Your account is not linked to a company.'
+    return
+   }
+
+   const { data, error } = await supabase
+    .from('locations')
+    .select(
+     `
+      id,
+      name,
+      location_number,
+      company_id,
+      company:companies(id, name)
+     `,
+    )
+    .eq('company_id', authStore.companyId)
+    .eq('is_active', true)
+    .order('name')
+
+   if (error) throw error
+   const mapped = (data ?? []).map((l) => {
+    const companyData = l.company as { id: string; name: string } | null
+    return {
+     id: l.id,
+     name: l.name,
+     location_number: l.location_number,
+     company_id: l.company_id,
+     company_name: companyData?.name || 'Unknown company',
+    }
+   })
+
+   locations.value = mapped
+   if (mapped.length === 0) {
+    locationError.value = 'No active locations found for your company.'
+    return
+   }
+   if (authStore.locationId) {
+    selectedLocationId.value = authStore.locationId
+   } else if (mapped[0]) {
+    selectedLocationId.value = mapped[0].id
+   }
+   return
+  }
+
   const { data, error } = await supabase
-   .from('companies')
-   .select('id, name')
+   .from('locations')
+   .select(
+    `
+     id,
+     name,
+     location_number,
+     company_id,
+     company:companies(id, name)
+    `,
+   )
    .eq('is_active', true)
-   .order('name', { ascending: true })
+   .order('name')
 
   if (error) throw error
-  companies.value = data || []
 
-  // Auto-select dev company if available
-  if (devCompanyId && companies.value.some((c) => c.id === devCompanyId)) {
-   selectedCompanyId.value = devCompanyId
+  const rows = data ?? []
+  if (rows.length === 0) {
+   locationError.value = 'No active locations available.'
+   return
+  }
+
+  const grouped = new Map<string, LocationOption[]>()
+
+  for (const l of rows) {
+   const companyData = l.company as { id: string; name: string } | null
+   const companyName = companyData?.name || 'Unknown company'
+   const location: LocationOption = {
+    id: l.id,
+    name: l.name,
+    location_number: l.location_number,
+    company_id: l.company_id,
+    company_name: companyName,
+   }
+
+   const list = grouped.get(companyName) || []
+   list.push(location)
+   grouped.set(companyName, list)
+   locations.value.push(location)
+  }
+
+  locationsByCompany.value = grouped
+
+  if (authStore.locationId) {
+   selectedLocationId.value = authStore.locationId
+  } else if (locations.value[0]) {
+   selectedLocationId.value = locations.value[0].id
   }
  } catch (err) {
-  console.error('Failed to fetch companies:', err)
+  console.error('Failed to fetch locations:', err)
+  locationError.value = 'Failed to load locations. Please try again.'
  } finally {
   isLoadingCompanies.value = false
  }
@@ -127,6 +286,7 @@ const handleUpload = () => {
 
  emit('upload', {
   file: selectedFile.value,
+  locationId: selectedLocationId.value,
   companyId: selectedCompanyId.value,
  })
 }
@@ -159,32 +319,62 @@ const handleDrop = (event: DragEvent) => {
 
 <template>
  <div class="space-y-5">
-  <!-- Company Selection -->
+  <!-- Location Selection -->
   <div class="space-y-2">
    <label class="flex items-center gap-2 text-sm font-medium">
-    <Building2 class="h-4 w-4 text-muted-foreground" />
-    Company
+    <MapPin class="h-4 w-4 text-muted-foreground" />
+    Location
    </label>
-   <Select v-model="selectedCompanyId" :disabled="isLoadingCompanies">
+   <Select
+    v-model="selectedLocationId"
+    :disabled="isLoadingCompanies || isLocationLocked"
+   >
     <SelectTrigger class="w-full">
      <SelectValue
-      :placeholder="isLoadingCompanies ? 'Loading...' : 'Select company'"
+      :placeholder="isLoadingCompanies ? 'Loading...' : 'Select location'"
      />
     </SelectTrigger>
     <SelectContent>
-     <SelectGroup>
-      <SelectItem
-       v-for="company in companies"
-       :key="company.id"
-       :value="company.id"
+     <template v-if="authStore.userRole === 'master'">
+      <SelectGroup
+       v-for="[companyName, companyLocations] in locationsByCompany"
+       :key="companyName"
       >
-       {{ company.name }}
-      </SelectItem>
-     </SelectGroup>
+       <SelectLabel class="flex items-center gap-2">
+        <Building2 class="h-3 w-3" />
+        {{ companyName }}
+       </SelectLabel>
+       <SelectItem
+        v-for="location in companyLocations"
+        :key="location.id"
+        :value="location.id"
+       >
+        {{ location.name }} (#{{ location.location_number }})
+       </SelectItem>
+      </SelectGroup>
+     </template>
+     <template v-else>
+      <SelectGroup>
+       <SelectItem
+        v-for="location in locations"
+        :key="location.id"
+        :value="location.id"
+       >
+        {{ location.name }} (#{{ location.location_number }})
+       </SelectItem>
+      </SelectGroup>
+     </template>
     </SelectContent>
    </Select>
-   <p class="text-xs text-muted-foreground">
-    Prices will be compared using this company's negotiated rates
+   <p v-if="selectedLocation" class="text-xs text-muted-foreground">
+    Company: <span class="font-medium">{{ selectedCompanyName }}</span> ·
+    Location:
+    <span class="font-medium">
+     {{ selectedLocation.name }} (#{{ selectedLocation.location_number }})
+    </span>
+   </p>
+   <p v-else class="text-xs text-muted-foreground">
+    Price checks are scoped to a specific location.
    </p>
   </div>
 
@@ -247,7 +437,10 @@ const handleDrop = (event: DragEvent) => {
   </div>
 
   <!-- File Error -->
-  <p v-if="fileError" class="text-xs text-destructive">
+  <p v-if="locationError" class="text-xs text-destructive">
+   {{ locationError }}
+  </p>
+  <p v-else-if="fileError" class="text-xs text-destructive">
    {{ fileError }}
   </p>
 

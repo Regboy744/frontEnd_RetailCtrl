@@ -216,7 +216,7 @@ onMounted(() => {
     class="flex flex-col items-center justify-center min-h-[360px] gap-3"
    >
     <div
-     class="w-10 h-10 border-3 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin"
+     class="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin"
     ></div>
     <span class="text-muted-foreground text-xs">Loading weather...</span>
    </div>
@@ -240,21 +240,21 @@ onMounted(() => {
     <div class="flex justify-between items-start mb-5">
      <div class="flex flex-col gap-0.5">
       <div class="flex items-center gap-1.5">
-       <MapPin class="w-3.5 h-3.5 text-cyan-500" />
+       <MapPin class="w-3.5 h-3.5 text-primary" />
        <h2 class="text-base font-semibold text-foreground">
         {{ locationName }}
        </h2>
        <!-- Refresh Button -->
        <button
         type="button"
-        class="p-1 rounded-md hover:bg-secondary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+        class="p-1 rounded-md hover:bg-secondary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50"
         :class="{ 'opacity-50 cursor-not-allowed': isRefreshing }"
         :disabled="isRefreshing"
         title="Refresh weather data"
         @click="handleRefresh"
        >
         <RefreshCw
-         class="w-3.5 h-3.5 text-muted-foreground hover:text-cyan-500 transition-colors"
+         class="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors"
          :class="{ 'animate-spin': isRefreshing }"
         />
        </button>
@@ -273,7 +273,7 @@ onMounted(() => {
       </div>
       <component
        :is="symbolToIcon[currentSymbol] || Sun"
-       class="w-8 h-8 text-cyan-500"
+       class="w-8 h-8 text-primary"
       />
      </div>
     </div>
@@ -281,36 +281,36 @@ onMounted(() => {
     <!-- Stats Grid -->
     <div class="grid grid-cols-3 gap-2 mb-5">
      <div
-      class="bg-secondary rounded-xl p-3 text-center border border-transparent hover:border-cyan-500/50 transition-all duration-200 cursor-default"
+      class="bg-secondary rounded-xl p-3 text-center border border-transparent hover:border-primary/50 transition-all duration-200 cursor-default"
      >
       <div
        class="text-[9px] text-muted-foreground uppercase tracking-wider mb-1"
       >
        Week Avg
       </div>
-      <div class="text-lg font-bold text-cyan-500">{{ averageTemp }}°C</div>
+      <div class="text-lg font-bold text-primary">{{ averageTemp }}°C</div>
       <div class="text-[9px] text-muted-foreground/70">Temperature</div>
      </div>
      <div
-      class="bg-secondary rounded-xl p-3 text-center border border-transparent hover:border-cyan-500/50 transition-all duration-200 cursor-default"
+      class="bg-secondary rounded-xl p-3 text-center border border-transparent hover:border-primary/50 transition-all duration-200 cursor-default"
      >
       <div
        class="text-[9px] text-muted-foreground uppercase tracking-wider mb-1"
       >
        Humidity
       </div>
-      <div class="text-lg font-bold text-cyan-500">{{ averageHumidity }}%</div>
+      <div class="text-lg font-bold text-primary">{{ averageHumidity }}%</div>
       <div class="text-[9px] text-muted-foreground/70">Average</div>
      </div>
      <div
-      class="bg-secondary rounded-xl p-3 text-center border border-transparent hover:border-cyan-500/50 transition-all duration-200 cursor-default"
+      class="bg-secondary rounded-xl p-3 text-center border border-transparent hover:border-primary/50 transition-all duration-200 cursor-default"
      >
       <div
        class="text-[9px] text-muted-foreground uppercase tracking-wider mb-1"
       >
        High / Low
       </div>
-      <div class="text-lg font-bold text-cyan-500">
+      <div class="text-lg font-bold text-primary">
        {{ Math.round(maxTemp) }}° / {{ Math.round(minTemp) }}°
       </div>
       <div class="text-[9px] text-muted-foreground/70">This week</div>
@@ -329,13 +329,13 @@ onMounted(() => {
         :key="day.date"
         type="button"
         class="flex flex-col items-center flex-1 min-w-[48px] py-2 px-1 rounded-lg transition-all cursor-pointer"
-        :class="selectedDay === index ? 'bg-cyan-500/20' : 'hover:bg-muted'"
+        :class="selectedDay === index ? 'bg-primary/20' : 'hover:bg-muted'"
         @click="selectedDay = index"
        >
         <!-- Weather Icon -->
         <component
          :is="symbolToIcon[day.symbols?.[0] || 'Unknown'] || Sun"
-         class="w-4 h-4 text-cyan-500 mb-1"
+         class="w-4 h-4 text-primary mb-1"
         />
 
         <!-- Max Temperature -->
@@ -354,8 +354,8 @@ onMounted(() => {
           class="w-full max-w-[18px] rounded-t transition-all duration-300"
           :class="
            selectedDay === index
-            ? 'bg-gradient-to-t from-cyan-600 to-cyan-400'
-            : 'bg-gradient-to-t from-cyan-600/70 to-cyan-500/50'
+            ? 'bg-gradient-to-t from-primary to-primary/70'
+            : 'bg-gradient-to-t from-primary/70 to-primary/50'
           "
           :style="{ height: `${getBarHeight(day.maxTemp)}%` }"
          ></div>
@@ -384,9 +384,9 @@ onMounted(() => {
       <!-- Temperature -->
       <div class="flex items-center gap-2">
        <div
-        class="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center flex-shrink-0"
+        class="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0"
        >
-        <Thermometer class="w-4 h-4 text-cyan-500" />
+        <Thermometer class="w-4 h-4 text-primary" />
        </div>
        <div class="flex flex-col">
         <span class="text-[9px] text-muted-foreground">Temperature</span>
@@ -400,9 +400,9 @@ onMounted(() => {
       <!-- Humidity -->
       <div class="flex items-center gap-2">
        <div
-        class="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center flex-shrink-0"
+        class="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0"
        >
-        <Droplets class="w-4 h-4 text-cyan-500" />
+        <Droplets class="w-4 h-4 text-primary" />
        </div>
        <div class="flex flex-col">
         <span class="text-[9px] text-muted-foreground">Humidity</span>
@@ -415,9 +415,9 @@ onMounted(() => {
       <!-- Wind -->
       <div class="flex items-center gap-2">
        <div
-        class="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center flex-shrink-0"
+        class="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0"
        >
-        <Wind class="w-4 h-4 text-cyan-500" />
+        <Wind class="w-4 h-4 text-primary" />
        </div>
        <div class="flex flex-col">
         <span class="text-[9px] text-muted-foreground">Wind</span>
@@ -430,9 +430,9 @@ onMounted(() => {
       <!-- Precipitation -->
       <div class="flex items-center gap-2">
        <div
-        class="w-7 h-7 rounded-md bg-cyan-500/10 flex items-center justify-center flex-shrink-0"
+        class="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0"
        >
-        <CloudDrizzle class="w-4 h-4 text-cyan-500" />
+        <CloudDrizzle class="w-4 h-4 text-primary" />
        </div>
        <div class="flex flex-col">
         <span class="text-[9px] text-muted-foreground">Precipitation</span>
@@ -452,7 +452,8 @@ onMounted(() => {
 /* Slim scrollbar */
 .overflow-x-auto {
  scrollbar-width: thin;
- scrollbar-color: rgba(100, 116, 139, 0.2) transparent;
+ scrollbar-color: color-mix(in oklch, var(--border) 50%, transparent)
+  transparent;
 }
 
 .overflow-x-auto::-webkit-scrollbar {
@@ -464,7 +465,7 @@ onMounted(() => {
 }
 
 .overflow-x-auto::-webkit-scrollbar-thumb {
- background-color: rgba(100, 116, 139, 0.2);
+ background-color: color-mix(in oklch, var(--border) 50%, transparent);
  border-radius: 3px;
 }
 </style>

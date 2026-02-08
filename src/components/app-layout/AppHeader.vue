@@ -44,7 +44,8 @@
      </BreadcrumbList>
     </Breadcrumb>
    </div>
-   <div class="ml-auto px-4">
+   <div class="ml-auto px-4 flex items-center gap-2">
+    <WarningsBell />
     <ThemeToggle />
    </div>
   </header>
@@ -66,6 +67,7 @@ import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { usePageMeta } from '@/composables/shared/usePageMeta'
 import ThemeToggle from '@/components/shared/ThemeToggle.vue'
+import WarningsBell from '@/components/app-layout/WarningsBell.vue'
 
 //Breadcrumb automation
 const { breadcrumbs } = usePageMeta()

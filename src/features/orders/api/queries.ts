@@ -25,40 +25,52 @@ export type LocationsByCompanyQueryType = QueryData<
  ReturnType<typeof locationsByCompanyQuery>
 >
 
-// Fetch orders with location and user info (for list view)
-export const ordersQuery = (filters: OrderFilters) => {
- if (!filters.companyId) {
-  // Return empty query if no company selected
-  return supabase
-   .from('orders')
-   .select(
-    `
-      id,
-      order_date,
-      status,
-      total_amount,
-      notes,
-      created_at,
-      locations!inner (
-        id,
-        name,
-        location_number,
-        company_id
-      ),
-      user_profiles (
-        id,
-        first_name,
-        last_name
-      )
-    `,
-   )
-   .eq('id', '00000000-0000-0000-0000-000000000000') // Impossible ID to return empty
- }
-
- let query = supabase
-  .from('orders')
+// Fetch locations with company info (for location-first filters)
+export const locationsWithCompanyQuery = (companyId?: string | null) => {
+ const query = supabase
+  .from('locations')
   .select(
    `
+    id,
+    name,
+    location_number,
+    company_id,
+    company:companies(id, name)
+   `,
+  )
+  .eq('is_active', true)
+  .order('name')
+
+ if (companyId) {
+  query.eq('company_id', companyId)
+ }
+
+ return query
+}
+
+export type LocationsWithCompanyQueryType = QueryData<
+ ReturnType<typeof locationsWithCompanyQuery>
+>
+
+export const locationByIdWithCompanyQuery = (locationId: string) =>
+ supabase
+  .from('locations')
+  .select(
+   `
+    id,
+    name,
+    location_number,
+    company_id,
+    company:companies(id, name)
+   `,
+  )
+  .eq('id', locationId)
+  .single()
+
+// Fetch orders with location and user info (for list view)
+export const ordersQuery = (filters: OrderFilters) => {
+ let query = supabase.from('orders').select(
+  `
       id,
       order_date,
       status,
@@ -77,12 +89,16 @@ export const ordersQuery = (filters: OrderFilters) => {
         last_name
       )
     `,
-  )
-  .eq('locations.company_id', filters.companyId)
+ )
 
  // Filter by location if specified
  if (filters.locationId) {
   query = query.eq('location_id', filters.locationId)
+ }
+
+ // Filter by company if specified
+ if (filters.companyId) {
+  query = query.eq('locations.company_id', filters.companyId)
  }
 
  // Filter by date range
@@ -169,4 +185,51 @@ export const orderItemsCountQuery = (orderIds: string[]) => {
 
 export type OrderItemsCountQueryType = QueryData<
  ReturnType<typeof orderItemsCountQuery>
+>
+
+export const orderItemsForStatsQuery = (orderIds: string[]) => {
+ const query = supabase.from('order_items').select('id, order_id, quantity')
+
+ if (orderIds.length === 0) {
+  return query.eq('id', '00000000-0000-0000-0000-000000000000')
+ }
+
+ return query.in('order_id', orderIds)
+}
+
+export type OrderItemsForStatsQueryType = QueryData<
+ ReturnType<typeof orderItemsForStatsQuery>
+>
+
+export const orderSavingsCalculationsQuery = (
+ companyId: string | null,
+ orderItemIds: string[],
+) => {
+ const query = supabase.from('savings_calculations').select(
+  `
+     id,
+     company_id,
+     order_item_id,
+     baseline_price,
+     chosen_price,
+     best_external_price,
+     delta_vs_baseline,
+     is_saving,
+     savings_percentage
+    `,
+ )
+
+ if (companyId) {
+  query.eq('company_id', companyId)
+ }
+
+ if (orderItemIds.length === 0) {
+  return query.eq('id', '00000000-0000-0000-0000-000000000000')
+ }
+
+ return query.in('order_item_id', orderItemIds)
+}
+
+export type OrderSavingsCalculationsQueryType = QueryData<
+ ReturnType<typeof orderSavingsCalculationsQuery>
 >

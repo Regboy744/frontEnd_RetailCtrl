@@ -52,6 +52,7 @@ import {
 interface Props {
  suppliers: Supplier[]
  companyId: string
+ locationId?: string
 }
 
 const props = defineProps<Props>()
@@ -77,6 +78,13 @@ const locations = ref<LocationOption[]>([])
 const locationsByCompany = ref<Map<string, LocationOption[]>>(new Map())
 const isLoadingLocations = ref(false)
 const selectedLocationId = ref<string>('')
+
+const isLocationLocked = computed(() => {
+ return (
+  !!props.locationId ||
+  (authStore.userRole === 'manager' && locations.value.length === 1)
+ )
+})
 
 // Validation warnings
 const validationResult = computed(() => validate(props.suppliers))
@@ -127,7 +135,7 @@ async function loadLocations() {
        location_number: data.location_number,
       },
      ]
-     selectedLocationId.value = data.id
+     selectedLocationId.value = props.locationId ?? data.id
     }
    }
   } else if (role === 'admin') {
@@ -147,8 +155,10 @@ async function loadLocations() {
      name: l.name,
      location_number: l.location_number,
     }))
-    // Pre-select user's location if available
-    if (authStore.locationId) {
+    // Pre-select explicit location, user location, or first
+    if (props.locationId) {
+     selectedLocationId.value = props.locationId
+    } else if (authStore.locationId) {
      selectedLocationId.value = authStore.locationId
     } else if (data.length > 0 && data[0]) {
      selectedLocationId.value = data[0].id
@@ -196,7 +206,9 @@ async function loadLocations() {
     locationsByCompany.value = grouped
 
     // Pre-select user's location if available
-    if (authStore.locationId) {
+    if (props.locationId) {
+     selectedLocationId.value = props.locationId
+    } else if (authStore.locationId) {
      selectedLocationId.value = authStore.locationId
     } else if (locations.value.length > 0 && locations.value[0]) {
      selectedLocationId.value = locations.value[0].id
@@ -215,6 +227,17 @@ watch(selectedLocationId, (newId) => {
  const location = locations.value.find((l) => l.id === newId) || null
  setSelectedLocation(location)
 })
+
+watch(
+ () => props.locationId,
+ (newId) => {
+  if (!newId) return
+  if (locations.value.length === 0) return
+  if (locations.value.some((l) => l.id === newId)) {
+   selectedLocationId.value = newId
+  }
+ },
+)
 
 // Handle submission
 async function handleSubmit() {
@@ -280,13 +303,13 @@ onMounted(() => {
       <!-- Warnings -->
       <div
        v-if="validationResult.warnings.length > 0"
-       class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 space-y-2"
+       class="bg-warning/10 border border-warning/30 rounded-lg p-3 space-y-2"
       >
-       <div class="flex items-center gap-2 text-amber-600 font-medium text-sm">
+       <div class="flex items-center gap-2 text-warning font-medium text-sm">
         <AlertTriangle class="h-4 w-4" />
         <span>Warnings</span>
        </div>
-       <ul class="text-sm text-amber-700 space-y-1">
+       <ul class="text-sm text-warning space-y-1">
         <li v-for="(warning, index) in validationResult.warnings" :key="index">
          {{ warning }}
         </li>
@@ -336,7 +359,7 @@ onMounted(() => {
            {{ formatCurrency(item.supplier_unit_price) }}
           </TableCell>
           <TableCell class="text-right">
-           <span v-if="item.savings > 0" class="text-green-600 font-medium">
+           <span v-if="item.savings > 0" class="text-success font-medium">
             {{ formatCurrency(item.savings) }}
            </span>
            <span v-else class="text-muted-foreground">-</span>
@@ -389,14 +412,14 @@ onMounted(() => {
          </div>
          <div class="flex justify-between text-sm">
           <span class="text-muted-foreground">Supplier Cost:</span>
-          <span class="font-medium text-green-600">
+          <span class="font-medium text-success">
            {{ formatCurrency(totalSupplierCost) }}
           </span>
          </div>
          <div class="border-t pt-3">
           <div class="flex justify-between">
            <span class="font-semibold">Total Savings:</span>
-           <span class="font-bold text-lg text-green-600">
+           <span class="font-bold text-lg text-success">
             {{ formatCurrency(totalSavings) }}
            </span>
           </div>
@@ -423,7 +446,7 @@ onMounted(() => {
            <Badge variant="outline" class="font-mono">
             {{ items.length }} items
            </Badge>
-           <span class="font-medium text-green-600">
+           <span class="font-medium text-success">
             {{ formatCurrency(items.reduce((sum, i) => sum + i.savings, 0)) }}
            </span>
           </div>
@@ -448,10 +471,7 @@ onMounted(() => {
 
          <Select
           v-model="selectedLocationId"
-          :disabled="
-           isLoadingLocations ||
-           (authStore.userRole === 'manager' && locations.length === 1)
-          "
+          :disabled="isLoadingLocations || isLocationLocked"
          >
           <SelectTrigger class="w-full">
            <SelectValue placeholder="Select a location..." />

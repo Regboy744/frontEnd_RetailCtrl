@@ -29,6 +29,12 @@ import type {
  CsvPreviewData,
 } from '@/features/masterProducts/types'
 
+definePage({
+ meta: {
+  allowedRoles: ['master'],
+ },
+})
+
 const {
  masterProducts,
  brands,
@@ -228,7 +234,7 @@ const columns: ColumnDef<MasterProductWithBrand>[] = [
     h('span', { class: 'font-mono text-sm' }, row.getValue('ean_code')),
     hasHistory
      ? h(History, {
-        class: 'w-3 h-3 text-blue-400',
+        class: 'w-3 h-3 text-primary',
         title: 'Has EAN history',
        })
      : null,
@@ -289,7 +295,7 @@ const columns: ColumnDef<MasterProductWithBrand>[] = [
      Badge,
      {
       variant: isActive ? 'default' : 'secondary',
-      class: isActive ? 'bg-green-500' : '',
+      class: isActive ? 'bg-success' : '',
      },
      () => (isActive ? 'Active' : 'Inactive'),
     ),

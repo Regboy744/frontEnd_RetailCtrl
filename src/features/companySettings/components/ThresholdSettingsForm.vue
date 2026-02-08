@@ -14,6 +14,7 @@ import {
 import { Loader2, Save, Settings } from 'lucide-vue-next'
 import { useCompanySupplierSettings } from '@/features/companySettings/composables/useCompanySupplierSettings'
 import type { ThresholdSettingFormData } from '@/features/companySettings/types'
+import { useAuthStore } from '@/stores/auth'
 
 interface Props {
  companyId: string
@@ -22,6 +23,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const companyIdRef = toRef(props, 'companyId')
+const authStore = useAuthStore()
 const {
  suppliersWithSettings,
  isLoading,
@@ -30,6 +32,10 @@ const {
  saveAllSettings,
  updateLocalSetting,
 } = useCompanySupplierSettings(companyIdRef)
+
+const canManageAdvancedSettings = computed(
+ () => authStore.userRole === 'master',
+)
 
 // Fetch data on mount
 await fetchSuppliersWithSettings()
@@ -44,10 +50,12 @@ const handleThresholdChange = (supplierId: string, value: string) => {
 
 // Handle active toggle
 const handleActiveToggle = (supplierId: string, value: boolean) => {
+ if (!canManageAdvancedSettings.value) return
  updateLocalSetting(supplierId, 'is_active', value)
 }
 
 const handleSpecialPricingToggle = (supplierId: string, value: boolean) => {
+ if (!canManageAdvancedSettings.value) return
  updateLocalSetting(supplierId, 'special_pricing_enabled', value)
 }
 
@@ -125,7 +133,7 @@ const hasSuppliers = computed(() => suppliersWithSettings.value.length > 0)
      <TableCell class="text-center">
       <Switch
        :model-value="supplier.special_pricing_enabled"
-       :disabled="!supplier.is_active"
+       :disabled="!canManageAdvancedSettings || !supplier.is_active"
        @update:model-value="
         (val) => handleSpecialPricingToggle(supplier.supplier_id, val)
        "
@@ -134,6 +142,7 @@ const hasSuppliers = computed(() => suppliersWithSettings.value.length > 0)
      <TableCell class="text-center">
       <Switch
        :model-value="supplier.is_active"
+       :disabled="!canManageAdvancedSettings"
        @update:model-value="
         (val) => handleActiveToggle(supplier.supplier_id, val)
        "

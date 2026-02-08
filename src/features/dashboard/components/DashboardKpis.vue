@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { DashboardKpis } from '@/features/dashboard/types'
 import KpiCard from '@/components/shared/KpiCard.vue'
 import { formatCurrency, formatPercent } from '@/lib/utils/currency'
-import { AlertTriangle, Euro, Percent, TrendingDown } from 'lucide-vue-next'
+import { Euro, Percent, TrendingDown } from 'lucide-vue-next'
 
 interface Props {
  kpis: DashboardKpis
@@ -19,9 +19,6 @@ const savedTone = computed(() =>
 )
 const savingsRateTone = computed(() =>
  props.kpis.savingsRate > 0 ? 'warning' : 'neutral',
-)
-const missedTone = computed(() =>
- props.kpis.missedSavingsTotal > 0 ? 'danger' : 'neutral',
 )
 </script>
 
@@ -52,16 +49,10 @@ const missedTone = computed(() =>
    description="Saved / baseline"
   />
   <KpiCard
-   title="Missed Savings"
-   :icon="AlertTriangle"
-   :tone="missedTone"
+   title="Custom KPI"
    :loading="isLoading"
-   :value="formatCurrency(kpis.missedSavingsTotal)"
-   :description="
-    kpis.missedLinesCount > 0
-     ? `${kpis.missedLinesCount} lines had cheaper options`
-     : 'No missed savings detected'
-   "
+   value="—"
+   description="Reserved for a future metric"
   />
  </div>
 </template>

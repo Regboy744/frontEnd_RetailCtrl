@@ -2,17 +2,16 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import { useErrorStore } from '@/stores/error'
+import { useWarningsStore } from '@/stores/warnings'
 import { getPresetDateRange, type DatePreset } from '@/lib/utils/datePresets'
 import {
  dashboardCompaniesQuery,
  dashboardCredentialHealthQuery,
- dashboardExpiringPricesQuery,
  dashboardLocationsQuery,
  dashboardOrderItemsQuery,
  dashboardOrdersQuery,
  dashboardSavingsCalculationsQuery,
  type DashboardCredentialHealthType,
- type DashboardExpiringPricesType,
  type DashboardOrderItemsType,
  type DashboardOrdersType,
  type DashboardSavingsCalculationsType,
@@ -24,8 +23,8 @@ import type {
  DashboardAlerts,
  DashboardFilters,
  DashboardKpis,
- ExpiringPriceRow,
  LocationOption,
+ SupplierSummaryRow,
  TopProductRow,
 } from '@/features/dashboard/types'
 
@@ -37,15 +36,12 @@ function emptyKpis(): DashboardKpis {
   savedTotal: 0,
   overspendTotal: 0,
   savingsRate: 0,
-  missedSavingsTotal: 0,
-  missedLinesCount: 0,
  }
 }
 
 function emptyAlerts(): DashboardAlerts {
  return {
   credentialIssues: [],
-  expiringPrices: [],
  }
 }
 
@@ -60,6 +56,7 @@ function normalizeLoginStatus(status: string | null): CredentialLoginStatus {
 export const useDashboard = () => {
  const authStore = useAuthStore()
  const errorStore = useErrorStore()
+ const warningsStore = useWarningsStore()
 
  const companies = ref<CompanyOption[]>([])
  const locations = ref<LocationOption[]>([])
@@ -79,6 +76,7 @@ export const useDashboard = () => {
  const kpis = ref<DashboardKpis>(emptyKpis())
  const topProductsByUnits = ref<TopProductRow[]>([])
  const topProductsBySpend = ref<TopProductRow[]>([])
+ const supplierSummary = ref<SupplierSummaryRow[]>([])
  const alerts = ref<DashboardAlerts>(emptyAlerts())
 
  const role = computed(() => authStore.userRole)
@@ -149,6 +147,13 @@ export const useDashboard = () => {
   kpis.value = emptyKpis()
   topProductsByUnits.value = []
   topProductsBySpend.value = []
+  supplierSummary.value = []
+  warningsStore.clear()
+ }
+
+ const clearAlerts = () => {
+  alerts.value = emptyAlerts()
+  warningsStore.clear()
  }
 
  const fetchCompanies = async () => {
@@ -196,7 +201,7 @@ export const useDashboard = () => {
   const range = getPresetDateRange('month')
   filters.value = {
    companyId: role.value === 'master' ? null : filters.value.companyId,
-   locationId: role.value === 'admin' ? (authStore.locationId ?? null) : null,
+   locationId: null,
    datePreset: 'month',
    dateFrom: range.dateFrom,
    dateTo: range.dateTo,
@@ -206,32 +211,23 @@ export const useDashboard = () => {
  const refreshDashboard = async () => {
   if (!isScopeReady.value) {
    resetDashboard()
-   alerts.value = emptyAlerts()
+   clearAlerts()
    return
   }
 
   const companyId = effectiveCompanyId.value
   if (!companyId) {
    resetDashboard()
-   alerts.value = emptyAlerts()
+   clearAlerts()
    return
   }
 
   isLoadingDashboard.value = true
 
   try {
-   const now = new Date()
-   const cutoff = new Date(now)
-   cutoff.setDate(now.getDate() + 30)
-
    const credentialPromise = dashboardCredentialHealthQuery(
     companyId,
     effectiveLocationId.value,
-   )
-   const expiringPromise = dashboardExpiringPricesQuery(
-    companyId,
-    now.toISOString(),
-    cutoff.toISOString(),
    )
 
    const {
@@ -248,7 +244,7 @@ export const useDashboard = () => {
    if (ordersError) {
     errorStore.setError({ error: ordersError, customCode: ordersStatus })
     resetDashboard()
-    alerts.value = emptyAlerts()
+    clearAlerts()
     return
    }
 
@@ -267,7 +263,7 @@ export const useDashboard = () => {
    if (itemsError) {
     errorStore.setError({ error: itemsError, customCode: itemsStatus })
     resetDashboard()
-    alerts.value = emptyAlerts()
+    clearAlerts()
     return
    }
 
@@ -283,16 +279,13 @@ export const useDashboard = () => {
    if (savingsError) {
     errorStore.setError({ error: savingsError, customCode: savingsStatus })
     resetDashboard()
-    alerts.value = emptyAlerts()
+    clearAlerts()
     return
    }
 
    const savings = (savingsData ?? []) as DashboardSavingsCalculationsType
 
-   const [credentialRes, expiringRes] = await Promise.all([
-    credentialPromise,
-    expiringPromise,
-   ])
+   const [credentialRes] = await Promise.all([credentialPromise])
 
    const credentialData = (credentialRes.data ??
     []) as DashboardCredentialHealthType
@@ -325,40 +318,10 @@ export const useDashboard = () => {
     })
    }
 
-   const expiringData = (expiringRes.data ?? []) as DashboardExpiringPricesType
-   const expiringPrices: ExpiringPriceRow[] = expiringData
-    .filter((p) => !!p.valid_until)
-    .map((p) => {
-     const supplierName =
-      (p.suppliers as { name?: string } | null)?.name ?? 'Unknown supplier'
-     const productDescription =
-      (p.master_products as { description?: string } | null)?.description ??
-      'Unknown product'
-     const articleCode =
-      (p.master_products as { article_code?: string } | null)?.article_code ??
-      '-'
-
-     return {
-      id: p.id,
-      supplierName,
-      productDescription,
-      articleCode,
-      negotiatedPrice: p.negotiated_price,
-      validUntil: p.valid_until as string,
-     }
-    })
-
-   if (expiringRes.error) {
-    errorStore.setError({
-     error: expiringRes.error,
-     customCode: expiringRes.status,
-    })
-   }
-
    alerts.value = {
     credentialIssues,
-    expiringPrices,
    }
+   warningsStore.setCredentialIssues(credentialIssues)
 
    // Map order IDs to dates for per-product latest ordering
    const orderDateById = new Map<string, string>()
@@ -375,8 +338,6 @@ export const useDashboard = () => {
    let savedTotal = 0
    let overspendTotal = 0
    let baselineTotal = 0
-   let missedSavingsTotal = 0
-   let missedLinesCount = 0
 
    for (const s of savings) {
     const delta = s.delta_vs_baseline ?? 0
@@ -388,14 +349,6 @@ export const useDashboard = () => {
 
     const qty = quantityByOrderItemId.get(s.order_item_id) ?? 0
     baselineTotal += (s.baseline_price ?? 0) * qty
-
-    if (
-     typeof s.best_external_price === 'number' &&
-     s.best_external_price < s.chosen_price
-    ) {
-     missedSavingsTotal += (s.chosen_price - s.best_external_price) * qty
-     missedLinesCount += 1
-    }
    }
 
    const savingsRate = baselineTotal > 0 ? savedTotal / baselineTotal : 0
@@ -446,6 +399,65 @@ export const useDashboard = () => {
     .sort((a, b) => b.spend - a.spend)
     .slice(0, 10)
 
+   // Per-supplier aggregation
+   const supplierAgg = new Map<
+    string,
+    {
+     supplierName: string
+     orderIds: Set<string>
+     spendTotal: number
+     savedTotal: number
+    }
+   >()
+
+   // Build savings lookup by order_item_id
+   const savingsByItemId = new Map<string, number>()
+   for (const s of savings) {
+    const delta = s.delta_vs_baseline ?? 0
+    if (delta < 0) {
+     savingsByItemId.set(s.order_item_id, -delta)
+    }
+   }
+
+   for (const item of orderItems) {
+    const supplierProduct = item.supplier_products as {
+     supplier_id: string
+     suppliers: { id: string; name: string } | null
+    } | null
+
+    const supplierId = supplierProduct?.supplier_id
+    const supplierName = supplierProduct?.suppliers?.name ?? 'Unknown supplier'
+
+    if (!supplierId) continue
+
+    const existing = supplierAgg.get(supplierId)
+    const itemSaved = savingsByItemId.get(item.id) ?? 0
+
+    if (!existing) {
+     supplierAgg.set(supplierId, {
+      supplierName,
+      orderIds: new Set([item.order_id]),
+      spendTotal: item.total_price,
+      savedTotal: itemSaved,
+     })
+    } else {
+     existing.orderIds.add(item.order_id)
+     existing.spendTotal += item.total_price
+     existing.savedTotal += itemSaved
+    }
+   }
+
+   supplierSummary.value = Array.from(supplierAgg.entries())
+    .map(([id, agg]) => ({
+     supplierId: id,
+     supplierName: agg.supplierName,
+     ordersCount: agg.orderIds.size,
+     spendTotal: agg.spendTotal,
+     savedTotal: agg.savedTotal,
+    }))
+    .sort((a, b) => b.spendTotal - a.spendTotal)
+    .slice(0, 8)
+
    kpis.value = {
     ordersCount,
     spendTotal,
@@ -453,8 +465,6 @@ export const useDashboard = () => {
     savedTotal,
     overspendTotal,
     savingsRate,
-    missedSavingsTotal,
-    missedLinesCount,
    }
   } finally {
    isLoadingDashboard.value = false
@@ -482,7 +492,7 @@ export const useDashboard = () => {
    // Admin/manager: company is derived from auth store, but location may be
    // pre-selected to the user's location for convenience.
    if (newRole === 'admin') {
-    filters.value.locationId = authStore.locationId ?? null
+    filters.value.locationId = null
    }
   },
   { immediate: true },
@@ -536,6 +546,7 @@ export const useDashboard = () => {
   kpis,
   topProductsByUnits,
   topProductsBySpend,
+  supplierSummary,
   alerts,
   dateError,
   showSelectCompanyMessage,

@@ -54,7 +54,7 @@ const formatCurrency = (amount: number): string => {
 
       <div
        v-if="totalEstimatedSavings > 0"
-       class="flex items-center gap-1.5 text-green-600"
+       class="flex items-center gap-1.5 text-success"
       >
        <Sparkles class="h-4 w-4" />
        <span class="font-semibold">

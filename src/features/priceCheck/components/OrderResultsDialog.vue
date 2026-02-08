@@ -101,11 +101,8 @@ function handleOpenAllBaskets() {
   <SheetContent class="sm:max-w-[700px] overflow-y-auto">
    <SheetHeader>
     <SheetTitle class="flex items-center gap-2">
-     <CheckCircle2
-      v-if="submitResult?.success"
-      class="h-5 w-5 text-green-500"
-     />
-     <AlertTriangle v-else class="h-5 w-5 text-amber-500" />
+     <CheckCircle2 v-if="submitResult?.success" class="h-5 w-5 text-success" />
+     <AlertTriangle v-else class="h-5 w-5 text-warning" />
      Order Submission Results
     </SheetTitle>
     <SheetDescription>
@@ -128,8 +125,8 @@ function handleOpenAllBaskets() {
       </div>
       <div class="text-xs text-muted-foreground">Suppliers</div>
      </div>
-     <div class="bg-green-500/10 rounded-lg p-3 text-center">
-      <div class="text-2xl font-bold text-green-600">
+     <div class="bg-success/10 rounded-lg p-3 text-center">
+      <div class="text-2xl font-bold text-success">
        {{ submitResult.summary.total_items_added }}
       </div>
       <div class="text-xs text-muted-foreground">Items Added</div>
@@ -138,7 +135,7 @@ function handleOpenAllBaskets() {
       :class="[
        'rounded-lg p-3 text-center',
        submitResult.summary.total_items_failed > 0
-        ? 'bg-red-500/10'
+        ? 'bg-destructive/10'
         : 'bg-muted/50',
       ]"
      >
@@ -146,7 +143,7 @@ function handleOpenAllBaskets() {
        :class="[
         'text-2xl font-bold',
         submitResult.summary.total_items_failed > 0
-         ? 'text-red-500'
+         ? 'text-destructive'
          : 'text-muted-foreground',
        ]"
       >
@@ -174,12 +171,12 @@ function handleOpenAllBaskets() {
       <div
        :class="[
         'px-4 py-3 flex items-center justify-between',
-        result.success ? 'bg-green-500/5' : 'bg-red-500/5',
+        result.success ? 'bg-success/5' : 'bg-destructive/5',
        ]"
       >
        <div class="flex items-center gap-3">
-        <CheckCircle2 v-if="result.success" class="h-5 w-5 text-green-500" />
-        <XCircle v-else class="h-5 w-5 text-red-500" />
+        <CheckCircle2 v-if="result.success" class="h-5 w-5 text-success" />
+        <XCircle v-else class="h-5 w-5 text-destructive" />
         <div>
          <div class="font-medium">{{ result.supplier_name }}</div>
          <div class="text-xs text-muted-foreground">
@@ -208,9 +205,9 @@ function handleOpenAllBaskets() {
        @update:open="() => toggleSupplierDetails(result.supplier_id)"
       >
        <CollapsibleTrigger
-        class="w-full px-4 py-2 bg-red-500/5 border-t flex items-center justify-between hover:bg-red-500/10 transition-colors"
+        class="w-full px-4 py-2 bg-destructive/5 border-t flex items-center justify-between hover:bg-destructive/10 transition-colors"
        >
-        <span class="text-sm text-red-600 font-medium">
+        <span class="text-sm text-destructive font-medium">
          {{ result.failed_items.length }} failed
          {{ result.failed_items.length === 1 ? 'item' : 'items' }}
         </span>
@@ -261,7 +258,7 @@ function handleOpenAllBaskets() {
       <!-- Error message -->
       <div
        v-if="result.error && !result.success"
-       class="px-4 py-2 bg-red-500/5 border-t text-sm text-red-600"
+       class="px-4 py-2 bg-destructive/5 border-t text-sm text-destructive"
       >
        {{ result.error }}
       </div>
@@ -293,11 +290,11 @@ function handleOpenAllBaskets() {
     <!-- Warning for failed items -->
     <div
      v-if="hasFailedItems"
-     class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3"
+     class="bg-warning/10 border border-warning/30 rounded-lg p-3"
     >
      <div class="flex items-start gap-2">
-      <AlertTriangle class="h-4 w-4 text-amber-600 mt-0.5" />
-      <div class="text-sm text-amber-700">
+      <AlertTriangle class="h-4 w-4 text-warning mt-0.5" />
+      <div class="text-sm text-warning">
        <p class="font-medium">Some items could not be added</p>
        <p class="mt-1">
         Check the failed items above. You may need to add them manually or

@@ -82,6 +82,13 @@ export const dashboardOrderItemsQuery = (orderIds: string[]) => {
      description,
      article_code,
      unit_size
+   ),
+   supplier_products (
+     supplier_id,
+     suppliers (
+       id,
+       name
+     )
    )
   `,
  )
@@ -167,38 +174,4 @@ export const dashboardCredentialHealthQuery = (
 
 export type DashboardCredentialHealthType = QueryData<
  ReturnType<typeof dashboardCredentialHealthQuery>
->
-
-export const dashboardExpiringPricesQuery = (
- companyId: string,
- nowIso: string,
- cutoffIso: string,
-) =>
- supabase
-  .from('supplier_company_prices')
-  .select(
-   `
-    id,
-    negotiated_price,
-    valid_until,
-    suppliers (
-      id,
-      name
-    ),
-    master_products (
-      id,
-      description,
-      article_code
-    )
-   `,
-  )
-  .eq('company_id', companyId)
-  .not('valid_until', 'is', null)
-  .gte('valid_until', nowIso)
-  .lte('valid_until', cutoffIso)
-  .order('valid_until', { ascending: true })
-  .limit(20)
-
-export type DashboardExpiringPricesType = QueryData<
- ReturnType<typeof dashboardExpiringPricesQuery>
 >

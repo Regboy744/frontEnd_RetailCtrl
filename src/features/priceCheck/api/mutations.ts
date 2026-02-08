@@ -11,11 +11,13 @@ import type { PriceCheckApiResponse } from '../types'
  * Upload XLS file and compare prices in one call
  *
  * @param file - The XLS/XLSX file to upload
+ * @param locationId - The location ID for price comparison
  * @param companyId - The company ID for price comparison
  * @returns Price comparison results
  */
 export async function uploadAndCompare(
  file: File,
+ locationId: string,
  companyId: string,
 ): Promise<{
  success: boolean
@@ -24,6 +26,7 @@ export async function uploadAndCompare(
 }> {
  const formData = new FormData()
  formData.append('file', file)
+ formData.append('location_id', locationId)
  formData.append('company_id', companyId)
 
  const response = await apiClient.postFormData<PriceCheckApiResponse>(

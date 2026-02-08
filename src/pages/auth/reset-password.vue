@@ -57,10 +57,10 @@ const passwordStrength = computed(() => {
  if (/[0-9]/.test(pwd)) score++
  if (/[^a-zA-Z0-9]/.test(pwd)) score++
 
- if (score <= 2) return { level: 1, text: 'Weak', color: 'bg-red-500' }
- if (score <= 4) return { level: 2, text: 'Fair', color: 'bg-yellow-500' }
- if (score <= 5) return { level: 3, text: 'Good', color: 'bg-blue-500' }
- return { level: 4, text: 'Strong', color: 'bg-green-500' }
+ if (score <= 2) return { level: 1, text: 'Weak', color: 'bg-destructive' }
+ if (score <= 4) return { level: 2, text: 'Fair', color: 'bg-warning' }
+ if (score <= 5) return { level: 3, text: 'Good', color: 'bg-primary' }
+ return { level: 4, text: 'Strong', color: 'bg-success' }
 })
 
 // Combined error message
@@ -134,30 +134,30 @@ const goToLogin = () => {
 
 <template>
  <div
-  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-12"
+  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary to-background px-4 py-12"
  >
   <!-- Background decorations -->
   <div class="absolute inset-0 overflow-hidden">
    <div
-    class="absolute top-20 left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"
+    class="absolute top-20 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl"
    ></div>
    <div
-    class="absolute bottom-20 right-10 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"
+    class="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
    ></div>
   </div>
 
   <Card
-   class="w-full max-w-md backdrop-blur-lg bg-slate-800/50 border-slate-700 relative z-10"
+   class="w-full max-w-md backdrop-blur-lg bg-card/50 border-border relative z-10"
   >
    <!-- Loading State -->
    <template v-if="pageStatus === 'loading'">
     <CardContent
      class="flex flex-col items-center justify-center py-12 space-y-4"
     >
-     <div class="p-4 bg-blue-500/10 rounded-full">
-      <Loader2 class="w-8 h-8 text-blue-400 animate-spin" />
+     <div class="p-4 bg-primary/10 rounded-full">
+      <Loader2 class="w-8 h-8 text-primary animate-spin" />
      </div>
-     <p class="text-slate-300">Verifying reset link...</p>
+     <p class="text-foreground/80">Verifying reset link...</p>
     </CardContent>
    </template>
 
@@ -166,22 +166,27 @@ const goToLogin = () => {
     <CardContent
      class="flex flex-col items-center justify-center py-12 space-y-6"
     >
-     <div class="p-4 bg-red-500/10 rounded-full">
-      <AlertCircle class="w-8 h-8 text-red-400" />
+     <div class="p-4 bg-destructive/10 rounded-full">
+      <AlertCircle class="w-8 h-8 text-destructive" />
      </div>
      <div class="text-center space-y-2">
-      <p class="text-red-400">{{ pageError }}</p>
-      <p class="text-slate-400 text-sm">
+      <p class="text-destructive">{{ pageError }}</p>
+      <p class="text-muted-foreground text-sm">
        Please request a new password reset link.
       </p>
      </div>
      <RouterLink to="/auth/forgot-password" class="w-full">
-      <Button class="w-full bg-blue-600 hover:bg-blue-700 text-white">
+      <Button
+       class="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+      >
        Request new link
       </Button>
      </RouterLink>
      <RouterLink to="/auth/login">
-      <Button variant="ghost" class="text-slate-400 hover:text-white">
+      <Button
+       variant="ghost"
+       class="text-muted-foreground hover:text-foreground"
+      >
        <ArrowLeft class="w-4 h-4 mr-2" />
        Back to login
       </Button>
@@ -194,15 +199,17 @@ const goToLogin = () => {
     <CardContent
      class="flex flex-col items-center justify-center py-12 space-y-6"
     >
-     <div class="p-4 bg-green-500/10 rounded-full">
-      <CheckCircle2 class="w-8 h-8 text-green-400" />
+     <div class="p-4 bg-success/10 rounded-full">
+      <CheckCircle2 class="w-8 h-8 text-success" />
      </div>
      <div class="text-center space-y-2">
-      <h2 class="text-xl font-semibold text-white">Password updated!</h2>
-      <p class="text-slate-400">Your password has been successfully changed.</p>
+      <h2 class="text-xl font-semibold text-foreground">Password updated!</h2>
+      <p class="text-muted-foreground">
+       Your password has been successfully changed.
+      </p>
      </div>
      <Button
-      class="w-full bg-blue-600 hover:bg-blue-700 text-white"
+      class="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
       @click="goToLogin"
      >
       Continue to login
@@ -215,16 +222,16 @@ const goToLogin = () => {
     <CardHeader class="space-y-4 text-center pb-2">
      <!-- Logo/Brand -->
      <div class="flex justify-center">
-      <div class="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
-       <ShoppingCart class="w-8 h-8 text-blue-400" />
+      <div class="p-3 bg-primary/10 rounded-xl border border-primary/20">
+       <ShoppingCart class="w-8 h-8 text-primary" />
       </div>
      </div>
 
      <div class="space-y-2">
-      <CardTitle class="text-2xl font-bold text-white">
+      <CardTitle class="text-2xl font-bold text-foreground">
        Set new password
       </CardTitle>
-      <p class="text-slate-400 text-sm">
+      <p class="text-muted-foreground text-sm">
        Create a strong password for your account
       </p>
      </div>
@@ -234,10 +241,10 @@ const goToLogin = () => {
      <!-- Error Message -->
      <div
       v-if="displayError"
-      class="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20"
+      class="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20"
      >
-      <AlertCircle class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-      <div class="text-sm text-red-400">
+      <AlertCircle class="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+      <div class="text-sm text-destructive">
        {{ displayError }}
       </div>
      </div>
@@ -246,10 +253,10 @@ const goToLogin = () => {
      <form @submit.prevent="handleSubmit" class="space-y-4">
       <!-- New Password Field -->
       <div class="space-y-2">
-       <Label for="password" class="text-slate-300">New Password</Label>
+       <Label for="password" class="text-foreground/80">New Password</Label>
        <div class="relative">
         <Lock
-         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
         />
         <Input
          id="password"
@@ -258,12 +265,12 @@ const goToLogin = () => {
          placeholder="Enter new password"
          autocomplete="new-password"
          :disabled="isLoading"
-         class="pl-10 pr-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+         class="pl-10 pr-10 bg-card/50 border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
          @input="handleInputChange"
         />
         <button
          type="button"
-         class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+         class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80 transition-colors"
          @click="showPassword = !showPassword"
          :aria-label="showPassword ? 'Hide password' : 'Show password'"
         >
@@ -282,7 +289,7 @@ const goToLogin = () => {
           :class="[
            i <= passwordStrength.level
             ? passwordStrength.color
-            : 'bg-slate-700',
+            : 'bg-secondary',
           ]"
          />
         </div>
@@ -297,12 +304,12 @@ const goToLogin = () => {
 
       <!-- Confirm Password Field -->
       <div class="space-y-2">
-       <Label for="confirmPassword" class="text-slate-300">
+       <Label for="confirmPassword" class="text-foreground/80">
         Confirm Password
        </Label>
        <div class="relative">
         <Lock
-         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+         class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
         />
         <Input
          id="confirmPassword"
@@ -311,12 +318,12 @@ const goToLogin = () => {
          placeholder="Confirm new password"
          autocomplete="new-password"
          :disabled="isLoading"
-         class="pl-10 pr-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+         class="pl-10 pr-10 bg-card/50 border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
          @input="handleInputChange"
         />
         <button
          type="button"
-         class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+         class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80 transition-colors"
          @click="showConfirmPassword = !showConfirmPassword"
          :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
         >
@@ -328,13 +335,13 @@ const goToLogin = () => {
        <!-- Password Match Indicator -->
        <p
         v-if="confirmPassword && password !== confirmPassword"
-        class="text-xs text-red-400"
+        class="text-xs text-destructive"
        >
         Passwords do not match
        </p>
        <p
         v-else-if="confirmPassword && password === confirmPassword"
-        class="text-xs text-green-400"
+        class="text-xs text-success"
        >
         Passwords match
        </p>
@@ -343,7 +350,7 @@ const goToLogin = () => {
       <!-- Submit Button -->
       <Button
        type="submit"
-       class="w-full bg-blue-600 hover:bg-blue-700 text-white"
+       class="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
        :disabled="isLoading || !isFormValid"
       >
        <Loader2 v-if="isLoading" class="w-4 h-4 mr-2 animate-spin" />
@@ -352,22 +359,20 @@ const goToLogin = () => {
      </form>
 
      <!-- Password Requirements -->
-     <div class="text-xs text-slate-500 space-y-1">
+     <div class="text-xs text-muted-foreground space-y-1">
       <p>Password must:</p>
       <ul class="list-disc list-inside space-y-0.5">
-       <li :class="password.length >= 8 ? 'text-green-400' : ''">
+       <li :class="password.length >= 8 ? 'text-success' : ''">
         Be at least 8 characters long
        </li>
        <li
         :class="
-         /[A-Z]/.test(password) && /[a-z]/.test(password)
-          ? 'text-green-400'
-          : ''
+         /[A-Z]/.test(password) && /[a-z]/.test(password) ? 'text-success' : ''
         "
        >
         Include uppercase and lowercase letters
        </li>
-       <li :class="/[0-9]/.test(password) ? 'text-green-400' : ''">
+       <li :class="/[0-9]/.test(password) ? 'text-success' : ''">
         Include at least one number
        </li>
       </ul>

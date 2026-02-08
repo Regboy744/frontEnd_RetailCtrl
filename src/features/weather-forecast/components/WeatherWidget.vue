@@ -224,23 +224,23 @@ day, icon, max/min, desc, and warning for rain/wind */
      <!-- Summary stats as three horizontally-aligned blocks -->
      <div class="flex flex-row gap-3 justify-between mb-1 flex-wrap">
       <div
-       class="flex flex-col items-center min-w-[85px] p-2 rounded bg-orange-100 dark:bg-orange-900/40"
+       class="flex flex-col items-center min-w-[85px] p-2 rounded bg-warning/10"
       >
-       <Thermometer class="h-4 w-4 text-orange-600 dark:text-orange-400 mb-1" />
+       <Thermometer class="h-4 w-4 text-warning mb-1" />
        <span class="font-bold text-lg">{{ formatTemp(signals.avgTemp) }}</span>
        <span class="text-[11px] text-muted-foreground">Avg Temp</span>
       </div>
       <div
-       class="flex flex-col items-center min-w-[85px] p-2 rounded bg-blue-100 dark:bg-blue-900/40"
+       class="flex flex-col items-center min-w-[85px] p-2 rounded bg-primary/10"
       >
-       <CloudRain class="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
+       <CloudRain class="h-4 w-4 text-primary mb-1" />
        <span class="font-bold text-base">{{ signals.heavyRainPeriods }}</span>
        <span class="text-[11px] text-muted-foreground">Rainy Periods</span>
       </div>
       <div
-       class="flex flex-col items-center min-w-[85px] p-2 rounded bg-slate-100 dark:bg-slate-700/40"
+       class="flex flex-col items-center min-w-[85px] p-2 rounded bg-secondary"
       >
-       <Wind class="h-4 w-4 text-slate-600 dark:text-slate-400 mb-1" />
+       <Wind class="h-4 w-4 text-muted-foreground mb-1" />
        <span class="font-bold text-base">{{ signals.windyPeriods }}</span>
        <span class="text-[11px] text-muted-foreground">Windy Periods</span>
       </div>
@@ -251,10 +251,10 @@ day, icon, max/min, desc, and warning for rain/wind */
       <div class="flex flex-row gap-1 overflow-x-auto min-w-0 scrollbar-thin">
        <template v-for="(day, idx) in dailySummary.slice(0, 7)" :key="day.date">
         <div
-         class="w-20 sm:w-24 flex-shrink-0 flex flex-col items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md px-0.5 py-1 mx-0.5"
+         class="w-20 sm:w-24 flex-shrink-0 flex flex-col items-center bg-card border border-border rounded-md px-0.5 py-1 mx-0.5"
         >
          <span
-          class="font-semibold text-[0.80rem] text-blue-900 dark:text-blue-100 text-center mb-0.5"
+          class="font-semibold text-[0.80rem] text-foreground text-center mb-0.5"
          >
           {{ getDayLabel(idx, day.date) }}
          </span>
@@ -262,17 +262,15 @@ day, icon, max/min, desc, and warning for rain/wind */
           :is="pickIconAndDesc(day.symbols).icon"
           class="h-6 w-6 mt-1 mb-1"
           :class="{
-           'text-blue-600': pickIconAndDesc(day.symbols).desc.includes('Rain'),
-           'text-yellow-500': pickIconAndDesc(day.symbols).desc.includes(
-            'Sunny',
-           ),
-           'text-indigo-500': pickIconAndDesc(day.symbols).desc.includes(
-            'Snow',
-           ),
-           'text-slate-500': pickIconAndDesc(day.symbols).desc.includes(
+           'text-primary': pickIconAndDesc(day.symbols).desc.includes('Rain'),
+           'text-warning': pickIconAndDesc(day.symbols).desc.includes('Sunny'),
+           'text-info': pickIconAndDesc(day.symbols).desc.includes('Snow'),
+           'text-muted-foreground': pickIconAndDesc(day.symbols).desc.includes(
             'Cloud',
            ),
-           'text-gray-400': pickIconAndDesc(day.symbols).desc.includes('Fog'),
+           'text-muted-foreground/70': pickIconAndDesc(
+            day.symbols,
+           ).desc.includes('Fog'),
           }"
           :title="pickIconAndDesc(day.symbols).desc"
          />
@@ -286,7 +284,7 @@ day, icon, max/min, desc, and warning for rain/wind */
          <component
           v-if="day.totalRain > 8 || day.avgWind > 13"
           :is="AlertTriangle"
-          class="w-4 h-4 text-yellow-400 mb-0.5"
+          class="w-4 h-4 text-warning mb-0.5"
           title="Severe day: rain or wind"
          />
         </div>

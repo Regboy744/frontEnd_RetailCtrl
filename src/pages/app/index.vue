@@ -3,7 +3,7 @@ import ForecastWidget from '@/features/weather-forecast/components/ForecastWidge
 import DashboardFilters from '@/features/dashboard/components/DashboardFilters.vue'
 import DashboardKpis from '@/features/dashboard/components/DashboardKpis.vue'
 import TopProductsPanel from '@/features/dashboard/components/TopProductsPanel.vue'
-import AlertsPanel from '@/features/dashboard/components/AlertsPanel.vue'
+import SupplierPerformanceChart from '@/features/dashboard/components/SupplierPerformanceChart.vue'
 import { useDashboard } from '@/features/dashboard/composables/useDashboard'
 import { Button } from '@/components/ui/button'
 
@@ -24,7 +24,7 @@ const {
  kpis,
  topProductsByUnits,
  topProductsBySpend,
- alerts,
+ supplierSummary,
  dateError,
  showSelectCompanyMessage,
  showNoCompanyMessage,
@@ -108,7 +108,10 @@ const {
      :top-by-spend="topProductsBySpend"
      :is-loading="isLoadingDashboard"
     />
-    <AlertsPanel :alerts="alerts" :is-loading="isLoadingDashboard" />
+    <SupplierPerformanceChart
+     :data="supplierSummary"
+     :is-loading="isLoadingDashboard"
+    />
    </div>
   </template>
 

@@ -18,15 +18,14 @@ import {
 } from '@/components/ui/select'
 import { DateRangePicker } from '@/components/ui/date-picker'
 import { FieldError } from '@/components/ui/field'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
- Building2,
  Calendar,
  Filter,
  MapPin,
  RefreshCcw,
+ RotateCcw,
 } from 'lucide-vue-next'
 
 interface Props {
@@ -75,15 +74,6 @@ const isLocationDisabled = computed(() => {
 })
 
 const isCustomDateRange = computed(() => props.filters.datePreset === 'custom')
-
-const hasActiveFilters = computed(() => {
- return (
-  props.filters.companyId !== null ||
-  props.filters.locationId !== null ||
-  props.filters.dateFrom !== null ||
-  props.filters.dateTo !== null
- )
-})
 
 const handleCompanyChange = (value: unknown) => {
  const companyId = value && String(value) !== 'none' ? String(value) : null
@@ -145,26 +135,25 @@ const handleReset = () => {
 
 <template>
  <div
-  class="rounded-lg border border-border/60 bg-gradient-to-br from-card via-card to-muted/20 p-4 shadow-sm space-y-4 md:space-y-0 md:flex md:items-end md:gap-4"
+  class="rounded-lg border border-border/60 bg-gradient-to-br from-card via-card to-muted/20 p-4 shadow-sm flex flex-col gap-4 md:flex-row md:items-center"
  >
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-3 shrink-0">
    <Filter class="h-4 w-4 text-primary" />
    <h3 class="text-sm font-semibold tracking-tight">Dashboard Filters</h3>
-   <Badge v-if="hasActiveFilters" variant="secondary" class="text-xs">
-    Active
-   </Badge>
   </div>
 
-  <div class="grid gap-4 md:flex-1 md:grid-cols-12">
+  <div class="hidden md:block h-8 w-px bg-border/60" />
+
+  <div class="flex flex-1 flex-wrap items-end gap-4">
    <!-- Company -->
-   <div v-if="showCompanySelect" class="space-y-1.5 md:col-span-4">
+   <div v-if="showCompanySelect" class="space-y-1.5 w-full sm:w-[200px]">
     <Label for="dashboard-company" class="text-xs">Company</Label>
     <Select
      :model-value="filters.companyId || 'none'"
      :disabled="isLoadingCompanies"
      @update:model-value="handleCompanyChange"
     >
-     <SelectTrigger id="dashboard-company" class="h-9">
+     <SelectTrigger id="dashboard-company" class="h-9 w-full">
       <SelectValue
        :placeholder="
         isLoadingCompanies ? 'Loading companies...' : 'Select company'
@@ -187,23 +176,27 @@ const handleReset = () => {
    </div>
 
    <!-- Location -->
-   <div v-if="showLocationSelect" class="space-y-1.5 md:col-span-3">
+   <div v-if="showLocationSelect" class="space-y-1.5 w-full sm:w-[200px]">
     <Label for="dashboard-location" class="text-xs">Location</Label>
     <Select
      :model-value="filters.locationId || 'all'"
      :disabled="isLocationDisabled"
      @update:model-value="handleLocationChange"
     >
-     <SelectTrigger id="dashboard-location" class="h-9">
-      <SelectValue
-       :placeholder="
-        isLocationDisabled
-         ? props.role === 'master'
-           ? 'Select company first'
-           : 'Loading locations...'
-         : 'All locations'
-       "
-      />
+     <SelectTrigger id="dashboard-location" class="h-9 w-full">
+      <span class="flex items-center gap-2 min-w-0 flex-1">
+       <MapPin class="h-4 w-4 text-muted-foreground" />
+       <SelectValue
+        class="truncate"
+        :placeholder="
+         isLocationDisabled
+          ? props.role === 'master'
+            ? 'Select company first'
+            : 'Loading locations...'
+          : 'All locations'
+        "
+       />
+      </span>
      </SelectTrigger>
      <SelectContent>
       <SelectGroup>
@@ -221,13 +214,13 @@ const handleReset = () => {
    </div>
 
    <!-- Period -->
-   <div class="space-y-1.5 md:col-span-3">
+   <div class="space-y-1.5 w-full sm:w-[200px]">
     <Label for="dashboard-period" class="text-xs">Period</Label>
     <Select
      :model-value="filters.datePreset"
      @update:model-value="handleDatePresetChange"
     >
-     <SelectTrigger id="dashboard-period" class="h-9">
+     <SelectTrigger id="dashboard-period" class="h-9 w-full">
       <SelectValue placeholder="Select period" />
      </SelectTrigger>
      <SelectContent>
@@ -245,7 +238,7 @@ const handleReset = () => {
    </div>
 
    <!-- Date Range (custom) -->
-   <div v-if="isCustomDateRange" class="space-y-1.5 md:col-span-5">
+   <div v-if="isCustomDateRange" class="space-y-1.5 w-full sm:w-[200px]">
     <Label class="text-xs flex items-center gap-2">
      <Calendar class="h-3 w-3" />
      Date range
@@ -262,19 +255,24 @@ const handleReset = () => {
    </div>
   </div>
 
-  <div class="flex items-center gap-2 md:ml-auto">
+  <div class="flex items-center gap-4 md:ml-auto">
    <Button
-    variant="outline"
+    variant="ghost"
     size="sm"
-    class="gap-2"
+    class="gap-2 text-muted-foreground hover:text-foreground"
     :disabled="isRefreshing"
     @click="handleRefresh"
    >
     <RefreshCcw class="h-4 w-4" />
     Refresh
    </Button>
-   <Button variant="ghost" size="sm" class="gap-2" @click="handleReset">
-    <Building2 class="h-4 w-4" />
+   <Button
+    variant="ghost"
+    size="sm"
+    class="gap-2 text-muted-foreground hover:text-foreground"
+    @click="handleReset"
+   >
+    <RotateCcw class="h-4 w-4" />
     Reset
    </Button>
    <div

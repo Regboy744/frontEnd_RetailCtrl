@@ -2,11 +2,11 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
- BadgeCheck,
  Bell,
  ChevronsUpDown,
  CreditCard,
  LogOut,
+ Settings,
  Sparkles,
  Shield,
 } from 'lucide-vue-next'
@@ -29,9 +29,11 @@ import {
 } from '@/components/ui/sidebar'
 import { Badge } from '@/components/ui/badge'
 import { useAuthStore } from '@/stores/auth'
+import { useErrorStore } from '@/stores/error'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const errorStore = useErrorStore()
 const { isMobile } = useSidebar()
 
 // User data from auth store
@@ -45,13 +47,13 @@ const userRole = computed(() => authStore.userRole)
 const roleBadgeClass = computed(() => {
  switch (userRole.value) {
   case 'master':
-   return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+   return 'bg-chart-4/10 text-chart-4 border-chart-4/20'
   case 'admin':
-   return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+   return 'bg-primary/10 text-primary border-primary/20'
   case 'manager':
-   return 'bg-green-500/10 text-green-400 border-green-500/20'
+   return 'bg-success/10 text-success border-success/20'
   default:
-   return 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+   return 'bg-muted text-muted-foreground border-border'
  }
 })
 
@@ -61,9 +63,19 @@ const handleLogout = async () => {
  router.push('/auth/login')
 }
 
-// Navigate to account settings
-const handleAccount = () => {
- router.push('/app/settings/account')
+// Navigate to company settings
+const handleSettings = () => {
+ const companyId = authStore.companyId
+ if (!companyId) {
+  errorStore.setError({
+   error: 'Your account is not linked to a company.',
+   customCode: 403,
+  })
+  router.push('/app/companies/error/no-company')
+  return
+ }
+
+ router.push(`/app/companies/${companyId}`)
 }
 
 // Navigate to billing
@@ -93,7 +105,7 @@ const handleUpgrade = () => {
      >
       <Avatar class="h-8 w-8 rounded-lg">
        <AvatarImage :src="userAvatar" :alt="userName" />
-       <AvatarFallback class="rounded-lg bg-blue-500/10 text-blue-400">
+       <AvatarFallback class="rounded-lg bg-primary/10 text-primary">
         {{ userInitials }}
        </AvatarFallback>
       </Avatar>
@@ -116,7 +128,7 @@ const handleUpgrade = () => {
       <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
        <Avatar class="h-8 w-8 rounded-lg">
         <AvatarImage :src="userAvatar" :alt="userName" />
-        <AvatarFallback class="rounded-lg bg-blue-500/10 text-blue-400">
+        <AvatarFallback class="rounded-lg bg-primary/10 text-primary">
          {{ userInitials }}
         </AvatarFallback>
        </Avatar>
@@ -148,9 +160,9 @@ const handleUpgrade = () => {
      </DropdownMenuGroup>
      <DropdownMenuSeparator />
      <DropdownMenuGroup>
-      <DropdownMenuItem class="cursor-pointer" @click="handleAccount">
-       <BadgeCheck class="mr-2 h-4 w-4" />
-       Account
+      <DropdownMenuItem class="cursor-pointer" @click="handleSettings">
+       <Settings class="mr-2 h-4 w-4" />
+       Settings
       </DropdownMenuItem>
       <DropdownMenuItem class="cursor-pointer" @click="handleBilling">
        <CreditCard class="mr-2 h-4 w-4" />
@@ -163,7 +175,7 @@ const handleUpgrade = () => {
      </DropdownMenuGroup>
      <DropdownMenuSeparator />
      <DropdownMenuItem
-      class="cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-500/10"
+      class="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
       @click="handleLogout"
      >
       <LogOut class="mr-2 h-4 w-4" />

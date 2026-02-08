@@ -111,8 +111,8 @@ const getThresholdPercentage = (supplierId: string): number | null => {
     :icon="Receipt"
     label="Order Value"
     :value="formatCurrency(summary.order_totals.total_order_value)"
-    icon-bg="bg-blue-100"
-    icon-color="text-blue-600"
+    icon-bg="bg-primary/10"
+    icon-color="text-primary"
    />
 
    <!-- Products Found -->
@@ -121,8 +121,8 @@ const getThresholdPercentage = (supplierId: string): number | null => {
     label="Products Found"
     :value="summary.counts.products_found"
     :sub-value="`/ ${summary.counts.total_items_submitted}`"
-    icon-bg="bg-green-100"
-    icon-color="text-green-600"
+    icon-bg="bg-success/10"
+    icon-color="text-success"
    />
 
    <!-- Not Found -->
@@ -130,8 +130,8 @@ const getThresholdPercentage = (supplierId: string): number | null => {
     :icon="PackageX"
     label="Not Found"
     :value="summary.counts.products_not_found.length"
-    icon-bg="bg-orange-100"
-    icon-color="text-orange-600"
+    icon-bg="bg-warning/10"
+    icon-color="text-warning"
    />
 
    <!-- Your Savings (from selections) -->
@@ -141,8 +141,8 @@ const getThresholdPercentage = (supplierId: string): number | null => {
     :value="
      formatCurrency(summary.evaluation_results.max_potential_savings ?? 0)
     "
-    icon-bg="bg-emerald-100"
-    icon-color="text-emerald-600"
+    icon-bg="bg-success/10"
+    icon-color="text-success"
    />
 
    <!-- Selected from Suppliers -->
@@ -151,8 +151,8 @@ const getThresholdPercentage = (supplierId: string): number | null => {
     label="From Suppliers"
     :value="selectedCount"
     :sub-value="`/ ${totalCount}`"
-    icon-bg="bg-purple-100"
-    icon-color="text-purple-600"
+    icon-bg="bg-chart-4/10"
+    icon-color="text-chart-4"
    />
   </div>
 
@@ -241,15 +241,15 @@ const getThresholdPercentage = (supplierId: string): number | null => {
        <div class="flex items-center justify-end gap-1">
         <!-- Local order is always the baseline (no difference) -->
         <template v-if="isLocalOrder(supplierRanking.supplier_id)">
-         <span class="text-blue-500 text-sm font-medium">Baseline</span>
+         <span class="text-primary text-sm font-medium">Baseline</span>
         </template>
         <!-- Supplier has selected products with savings -->
         <template v-else-if="supplierRanking.savings_on_won_products > 0">
-         <ArrowDown class="h-3 w-3 text-green-500" />
-         <span class="text-green-500 text-sm font-medium">
+         <ArrowDown class="h-3 w-3 text-success" />
+         <span class="text-success text-sm font-medium">
           {{ formatCurrency(supplierRanking.savings_on_won_products) }}
          </span>
-         <span class="text-green-500/70 text-xs">
+         <span class="text-success/70 text-xs">
           ({{ formatPercentage(supplierRanking.savings_percentage) }})
          </span>
         </template>

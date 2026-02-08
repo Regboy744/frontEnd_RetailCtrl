@@ -26,6 +26,35 @@ const props = withDefaults(defineProps<Props>(), {
  isLoading: false,
 })
 
+const maxRows = 10
+
+type DisplayProductRow = TopProductRow & { isPlaceholder?: boolean }
+
+const padTopProducts = (
+ rows: TopProductRow[],
+ prefix: string,
+): DisplayProductRow[] => {
+ const trimmed = rows.slice(0, maxRows)
+ const padding = Array.from(
+  { length: Math.max(0, maxRows - trimmed.length) },
+  (_, index) => ({
+   master_product_id: `${prefix}-placeholder-${index + 1}`,
+   description: '-',
+   article_code: '-',
+   unit_size: null,
+   quantity: 0,
+   spend: 0,
+   lastOrderDate: null,
+   isPlaceholder: true,
+  }),
+ )
+
+ return [...trimmed, ...padding]
+}
+
+const topByUnitsRows = computed(() => padTopProducts(props.topByUnits, 'units'))
+const topBySpendRows = computed(() => padTopProducts(props.topBySpend, 'spend'))
+
 const hasAnyData = computed(() => {
  return props.topByUnits.length > 0 || props.topBySpend.length > 0
 })
@@ -52,124 +81,148 @@ const hasAnyData = computed(() => {
     <Skeleton class="h-56 w-full" />
    </div>
 
-   <div v-else-if="!hasAnyData" class="py-10 text-center">
-    <p class="text-sm text-muted-foreground">No purchases in this period.</p>
+   <div v-else class="space-y-4">
+    <p v-if="!hasAnyData" class="text-sm text-muted-foreground text-center">
+     No purchases in this period.
+    </p>
+
+    <Tabs default-value="units" class="space-y-4">
+     <TabsList
+      class="grid w-full grid-cols-2 lg:w-auto lg:inline-grid bg-muted/20 border border-border/50 rounded-xl p-1 h-auto"
+     >
+      <TabsTrigger
+       value="units"
+       class="data-[state=active]:bg-card data-[state=active]:shadow-sm"
+      >
+       By Units
+      </TabsTrigger>
+      <TabsTrigger
+       value="spend"
+       class="data-[state=active]:bg-card data-[state=active]:shadow-sm"
+      >
+       By Spend
+      </TabsTrigger>
+     </TabsList>
+
+     <TabsContent value="units">
+      <div class="rounded-lg border border-border/60 overflow-hidden">
+       <Table>
+        <TableHeader class="bg-muted/20">
+         <TableRow>
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground"
+           >Product</TableHead
+          >
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
+           >Units</TableHead
+          >
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
+           >Spend</TableHead
+          >
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
+           >Last</TableHead
+          >
+         </TableRow>
+        </TableHeader>
+        <TableBody>
+         <TableRow
+          v-for="p in topByUnitsRows"
+          :key="p.master_product_id"
+          :class="
+           p.isPlaceholder ? 'text-muted-foreground/70' : 'hover:bg-muted/20'
+          "
+         >
+          <TableCell class="max-w-[420px]">
+           <div class="font-medium truncate">
+            {{ p.isPlaceholder ? '-' : p.description }}
+           </div>
+           <div class="text-xs text-muted-foreground font-mono">
+            {{ p.isPlaceholder ? '-' : p.article_code }}
+            <span v-if="!p.isPlaceholder && p.unit_size"
+             >· {{ p.unit_size }}</span
+            >
+           </div>
+          </TableCell>
+          <TableCell class="text-right font-medium">
+           {{ p.isPlaceholder ? '-' : p.quantity }}
+          </TableCell>
+          <TableCell class="text-right">
+           {{ p.isPlaceholder ? '-' : formatCurrency(p.spend) }}
+          </TableCell>
+          <TableCell class="text-right text-muted-foreground">
+           {{
+            p.isPlaceholder ? '-' : formatDateDisplay(p.lastOrderDate) || '-'
+           }}
+          </TableCell>
+         </TableRow>
+        </TableBody>
+       </Table>
+      </div>
+     </TabsContent>
+
+     <TabsContent value="spend">
+      <div class="rounded-lg border border-border/60 overflow-hidden">
+       <Table>
+        <TableHeader class="bg-muted/20">
+         <TableRow>
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground"
+           >Product</TableHead
+          >
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
+           >Spend</TableHead
+          >
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
+           >Units</TableHead
+          >
+          <TableHead
+           class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
+           >Last</TableHead
+          >
+         </TableRow>
+        </TableHeader>
+        <TableBody>
+         <TableRow
+          v-for="p in topBySpendRows"
+          :key="p.master_product_id"
+          :class="
+           p.isPlaceholder ? 'text-muted-foreground/70' : 'hover:bg-muted/20'
+          "
+         >
+          <TableCell class="max-w-[420px]">
+           <div class="font-medium truncate">
+            {{ p.isPlaceholder ? '-' : p.description }}
+           </div>
+           <div class="text-xs text-muted-foreground font-mono">
+            {{ p.isPlaceholder ? '-' : p.article_code }}
+            <span v-if="!p.isPlaceholder && p.unit_size"
+             >· {{ p.unit_size }}</span
+            >
+           </div>
+          </TableCell>
+          <TableCell class="text-right font-medium">
+           {{ p.isPlaceholder ? '-' : formatCurrency(p.spend) }}
+          </TableCell>
+          <TableCell class="text-right">
+           {{ p.isPlaceholder ? '-' : p.quantity }}
+          </TableCell>
+          <TableCell class="text-right text-muted-foreground">
+           {{
+            p.isPlaceholder ? '-' : formatDateDisplay(p.lastOrderDate) || '-'
+           }}
+          </TableCell>
+         </TableRow>
+        </TableBody>
+       </Table>
+      </div>
+     </TabsContent>
+    </Tabs>
    </div>
-
-   <Tabs v-else default-value="units" class="space-y-4">
-    <TabsList
-     class="grid w-full grid-cols-2 lg:w-auto lg:inline-grid bg-muted/20 border border-border/50 rounded-xl p-1 h-auto"
-    >
-     <TabsTrigger
-      value="units"
-      class="data-[state=active]:bg-card data-[state=active]:shadow-sm"
-     >
-      By Units
-     </TabsTrigger>
-     <TabsTrigger
-      value="spend"
-      class="data-[state=active]:bg-card data-[state=active]:shadow-sm"
-     >
-      By Spend
-     </TabsTrigger>
-    </TabsList>
-
-    <TabsContent value="units">
-     <div class="rounded-lg border border-border/60 overflow-hidden">
-      <Table>
-       <TableHeader class="bg-muted/20">
-        <TableRow>
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground"
-          >Product</TableHead
-         >
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
-          >Units</TableHead
-         >
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
-          >Spend</TableHead
-         >
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
-          >Last</TableHead
-         >
-        </TableRow>
-       </TableHeader>
-       <TableBody>
-        <TableRow
-         v-for="p in topByUnits"
-         :key="p.master_product_id"
-         class="hover:bg-muted/20"
-        >
-         <TableCell class="max-w-[420px]">
-          <div class="font-medium truncate">{{ p.description }}</div>
-          <div class="text-xs text-muted-foreground font-mono">
-           {{ p.article_code }}
-           <span v-if="p.unit_size">· {{ p.unit_size }}</span>
-          </div>
-         </TableCell>
-         <TableCell class="text-right font-medium">{{ p.quantity }}</TableCell>
-         <TableCell class="text-right">{{ formatCurrency(p.spend) }}</TableCell>
-         <TableCell class="text-right text-muted-foreground">
-          {{ formatDateDisplay(p.lastOrderDate) || '-' }}
-         </TableCell>
-        </TableRow>
-       </TableBody>
-      </Table>
-     </div>
-    </TabsContent>
-
-    <TabsContent value="spend">
-     <div class="rounded-lg border border-border/60 overflow-hidden">
-      <Table>
-       <TableHeader class="bg-muted/20">
-        <TableRow>
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground"
-          >Product</TableHead
-         >
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
-          >Spend</TableHead
-         >
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
-          >Units</TableHead
-         >
-         <TableHead
-          class="text-[11px] uppercase tracking-wider text-muted-foreground text-right"
-          >Last</TableHead
-         >
-        </TableRow>
-       </TableHeader>
-       <TableBody>
-        <TableRow
-         v-for="p in topBySpend"
-         :key="p.master_product_id"
-         class="hover:bg-muted/20"
-        >
-         <TableCell class="max-w-[420px]">
-          <div class="font-medium truncate">{{ p.description }}</div>
-          <div class="text-xs text-muted-foreground font-mono">
-           {{ p.article_code }}
-           <span v-if="p.unit_size">· {{ p.unit_size }}</span>
-          </div>
-         </TableCell>
-         <TableCell class="text-right font-medium">{{
-          formatCurrency(p.spend)
-         }}</TableCell>
-         <TableCell class="text-right">{{ p.quantity }}</TableCell>
-         <TableCell class="text-right text-muted-foreground">
-          {{ formatDateDisplay(p.lastOrderDate) || '-' }}
-         </TableCell>
-        </TableRow>
-       </TableBody>
-      </Table>
-     </div>
-    </TabsContent>
-   </Tabs>
   </CardContent>
  </Card>
 </template>

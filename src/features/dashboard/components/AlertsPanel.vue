@@ -7,9 +7,7 @@ import type {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency } from '@/lib/utils/currency'
-import { formatDateDisplay } from '@/lib/utils/date'
-import { AlertCircle, Clock, KeyRound } from 'lucide-vue-next'
+import { AlertCircle, KeyRound } from 'lucide-vue-next'
 
 interface Props {
  alerts: DashboardAlerts
@@ -23,7 +21,6 @@ const props = withDefaults(defineProps<Props>(), {
 const credentialIssueCount = computed(
  () => props.alerts.credentialIssues.length,
 )
-const expiringPriceCount = computed(() => props.alerts.expiringPrices.length)
 
 const statusBadge = (status: CredentialIssueRow['status']) => {
  if (status === 'failed') {
@@ -65,7 +62,10 @@ const countBadgeClass = (count: number, tone: 'ok' | 'warn'): string => {
 </script>
 
 <template>
- <Card class="overflow-hidden bg-gradient-to-br from-card via-card to-muted/20">
+ <Card
+  id="alerts-panel"
+  class="overflow-hidden bg-gradient-to-br from-card via-card to-muted/20"
+ >
   <CardHeader
    class="flex flex-row items-center justify-between space-y-0 border-b border-border/50 pb-4"
   >
@@ -87,7 +87,7 @@ const countBadgeClass = (count: number, tone: 'ok' | 'warn'): string => {
     <Skeleton class="h-24 w-full" />
    </div>
 
-   <div v-else class="space-y-6">
+   <div v-else>
     <!-- Supplier credential health -->
     <div class="space-y-3">
      <div class="flex items-center justify-between">
@@ -156,63 +156,6 @@ const countBadgeClass = (count: number, tone: 'ok' | 'warn'): string => {
        class="p-3 text-xs text-muted-foreground text-center"
       >
        Showing first 6 of {{ alerts.credentialIssues.length }} issues
-      </div>
-     </div>
-    </div>
-
-    <!-- Expiring negotiated prices -->
-    <div class="space-y-3">
-     <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-       <div
-        class="h-9 w-9 rounded-lg border border-border/60 bg-muted/30 text-muted-foreground flex items-center justify-center"
-       >
-        <Clock class="h-4 w-4" />
-       </div>
-       <h4 class="text-sm font-semibold">Expiring Prices (30 days)</h4>
-      </div>
-      <Badge
-       variant="outline"
-       class="text-xs"
-       :class="countBadgeClass(expiringPriceCount, 'warn')"
-      >
-       {{ expiringPriceCount }} expiring
-      </Badge>
-     </div>
-
-     <div
-      v-if="expiringPriceCount === 0"
-      class="rounded-lg border border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground"
-     >
-      No negotiated prices expiring in the next 30 days.
-     </div>
-
-     <div v-else class="rounded-lg border border-border/60 divide-y">
-      <div
-       v-for="p in alerts.expiringPrices.slice(0, 6)"
-       :key="p.id"
-       class="p-4 flex items-start justify-between gap-3 hover:bg-muted/10 transition-colors"
-      >
-       <div class="min-w-0">
-        <div class="font-medium truncate">{{ p.productDescription }}</div>
-        <div class="text-xs text-muted-foreground truncate">
-         {{ p.articleCode }} · {{ p.supplierName }}
-        </div>
-       </div>
-       <div class="flex flex-col items-end gap-1 shrink-0">
-        <span class="text-sm font-semibold">{{
-         formatCurrency(p.negotiatedPrice)
-        }}</span>
-        <span class="text-xs text-muted-foreground">
-         {{ formatDateDisplay(p.validUntil.split('T')[0] || null) || '-' }}
-        </span>
-       </div>
-      </div>
-      <div
-       v-if="alerts.expiringPrices.length > 6"
-       class="p-3 text-xs text-muted-foreground text-center"
-      >
-       Showing first 6 of {{ alerts.expiringPrices.length }} expiring prices
       </div>
      </div>
     </div>

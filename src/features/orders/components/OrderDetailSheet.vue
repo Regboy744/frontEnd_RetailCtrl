@@ -83,13 +83,13 @@ const getStatusVariant = (status: string | null) => {
 const getStatusColor = (status: string | null) => {
  switch (status) {
   case 'pending':
-   return 'bg-yellow-500'
+   return 'bg-warning'
   case 'confirmed':
-   return 'bg-blue-500'
+   return 'bg-primary'
   case 'delivered':
-   return 'bg-green-500'
+   return 'bg-success'
   case 'cancelled':
-   return 'bg-red-500'
+   return 'bg-destructive'
   default:
    return ''
  }
@@ -254,7 +254,7 @@ const handleExport = () => {
           class="text-right"
           :class="
            item.savings && item.savings > 0
-            ? 'text-green-600 font-medium'
+            ? 'text-success font-medium'
             : 'text-muted-foreground'
           "
          >
@@ -278,7 +278,7 @@ const handleExport = () => {
      </div>
      <div
       v-if="totalSavings > 0"
-      class="flex justify-between text-lg text-green-600"
+      class="flex justify-between text-lg text-success"
      >
       <span class="font-medium">Total Saved:</span>
       <span class="font-semibold">{{ formatCurrency(totalSavings) }}</span>

@@ -14,9 +14,14 @@ import SharedSheet from '@/components/shared/SharedSheet.vue'
 
 interface Props {
  companyId: string
+ readOnly?: boolean
+ allowCredentials?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+ readOnly: false,
+ allowCredentials: true,
+})
 
 const companyIdRef = toRef(props, 'companyId')
 const { locations, fetchLocations, saveLocation, removeLocation } =
@@ -44,91 +49,105 @@ const formatLocationType = (type: string) => {
  return type.charAt(0).toUpperCase() + type.slice(1)
 }
 
+const showActions = computed(() => !props.readOnly || props.allowCredentials)
+
 // Table columns
-const columns: ColumnDef<Location>[] = [
- {
-  accessorKey: 'location_number',
-  header: ({ column }) => {
-   return h(
-    Button,
-    {
-     class: 'hover:bg-transparent hover:text-current',
-     variant: 'ghost',
-     onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-    },
-    () => ['#', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })],
-   )
-  },
-  cell: ({ row }) => {
-   return h(
-    'div',
-    { class: 'text-center font-mono' },
-    row.getValue('location_number'),
-   )
-  },
-  enableSorting: true,
- },
- {
-  accessorKey: 'name',
-  header: ({ column }) => {
-   return h(
-    Button,
-    {
-     class: 'hover:bg-transparent hover:text-current',
-     variant: 'ghost',
-     onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-    },
-    () => ['Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })],
-   )
-  },
-  cell: ({ row }) => {
-   return h('div', { class: 'text-left font-medium' }, row.getValue('name'))
-  },
-  enableSorting: true,
- },
- {
-  accessorKey: 'location_type',
-  header: () => h('div', { class: 'text-left' }, 'Type'),
-  cell: ({ row }) => {
-   const type = row.getValue('location_type') as string
-   return h(
-    Badge,
-    { variant: type === 'store' ? 'default' : 'secondary' },
-    () => formatLocationType(type),
-   )
-  },
- },
- {
-  accessorKey: 'is_active',
-  header: () => h('div', { class: 'text-left' }, 'Status'),
-  cell: ({ row }) => {
-   const isActive = row.getValue('is_active') as boolean
-   return h(Badge, { variant: isActive ? 'default' : 'outline' }, () =>
-    isActive ? 'Active' : 'Inactive',
-   )
-  },
- },
- {
-  id: 'actions',
-  enableHiding: false,
-  header: () => h('div', { class: 'text-center' }, 'Actions'),
-  cell: ({ row }) => {
-   return h(
-    'div',
-    { class: 'text-center' },
-    h(LocationActions, {
-     location: row.original,
-     onSave: async (data) => {
-      await saveLocation(data)
+const columns = computed<ColumnDef<Location>[]>(() => {
+ const baseColumns: ColumnDef<Location>[] = [
+  {
+   accessorKey: 'location_number',
+   header: ({ column }) => {
+    return h(
+     Button,
+     {
+      class: 'hover:bg-transparent hover:text-current',
+      variant: 'ghost',
+      onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
      },
-     onDelete: async (id) => {
-      await removeLocation(id)
-     },
-    }),
-   )
+     () => ['#', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })],
+    )
+   },
+   cell: ({ row }) => {
+    return h(
+     'div',
+     { class: 'text-center font-mono' },
+     row.getValue('location_number'),
+    )
+   },
+   enableSorting: true,
   },
- },
-]
+  {
+   accessorKey: 'name',
+   header: ({ column }) => {
+    return h(
+     Button,
+     {
+      class: 'hover:bg-transparent hover:text-current',
+      variant: 'ghost',
+      onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
+     },
+     () => ['Name', h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })],
+    )
+   },
+   cell: ({ row }) => {
+    return h('div', { class: 'text-left font-medium' }, row.getValue('name'))
+   },
+   enableSorting: true,
+  },
+  {
+   accessorKey: 'location_type',
+   header: () => h('div', { class: 'text-left' }, 'Type'),
+   cell: ({ row }) => {
+    const type = row.getValue('location_type') as string
+    return h(
+     Badge,
+     { variant: type === 'store' ? 'default' : 'secondary' },
+     () => formatLocationType(type),
+    )
+   },
+  },
+  {
+   accessorKey: 'is_active',
+   header: () => h('div', { class: 'text-left' }, 'Status'),
+   cell: ({ row }) => {
+    const isActive = row.getValue('is_active') as boolean
+    return h(Badge, { variant: isActive ? 'default' : 'outline' }, () =>
+     isActive ? 'Active' : 'Inactive',
+    )
+   },
+  },
+ ]
+
+ if (!showActions.value) {
+  return baseColumns
+ }
+
+ return [
+  ...baseColumns,
+  {
+   id: 'actions',
+   enableHiding: false,
+   header: () => h('div', { class: 'text-center' }, 'Actions'),
+   cell: ({ row }) => {
+    return h(
+     'div',
+     { class: 'text-center' },
+     h(LocationActions, {
+      location: row.original,
+      readOnly: props.readOnly,
+      allowCredentials: props.allowCredentials,
+      onSave: async (data) => {
+       await saveLocation(data)
+      },
+      onDelete: async (id) => {
+       await removeLocation(id)
+      },
+     }),
+    )
+   },
+  },
+ ]
+})
 
 // Handle save from the "Add" button
 async function handleSave(data: LocationFormData) {
@@ -151,6 +170,7 @@ const hasLocations = computed(() => locations.value.length > 0)
     Add your first store or office location
    </p>
    <SharedSheet
+    v-if="!readOnly"
     trigger-label="Add First Location"
     title="Add New Location"
     description="Create a new location for this company"
@@ -172,6 +192,7 @@ const hasLocations = computed(() => locations.value.length > 0)
   <DataTable v-else :columns="columns" :data="locations" :config="tableConfig">
    <template #top-table>
     <SharedSheet
+     v-if="!readOnly"
      trigger-label="Add Location"
      title="Add New Location"
      description="Create a new location for this company"

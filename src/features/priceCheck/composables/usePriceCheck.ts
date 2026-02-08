@@ -350,13 +350,13 @@ export function usePriceCheck() {
  /**
   * Upload file and get price comparison
   */
- async function checkPrices(file: File, companyId: string) {
+ async function checkPrices(file: File, locationId: string, companyId: string) {
   isLoading.value = true
   error.value = null
   selectedFile.value = file
 
   try {
-   const response = await uploadAndCompare(file, companyId)
+   const response = await uploadAndCompare(file, locationId, companyId)
 
    if (!response.success) {
     error.value = response.error || 'Failed to check prices'

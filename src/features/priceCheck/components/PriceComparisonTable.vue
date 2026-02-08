@@ -80,8 +80,8 @@ const formatCurrency = (amount: number): string => {
 // Get difference color
 const getDifferenceClass = (difference: number | undefined): string => {
  if (difference === undefined) return ''
- if (difference < 0) return 'text-green-600'
- if (difference > 0) return 'text-red-500'
+ if (difference < 0) return 'text-success'
+ if (difference > 0) return 'text-destructive'
  return 'text-muted-foreground'
 }
 
@@ -351,7 +351,7 @@ const handleSelectionToggle = (
       class="h-8"
       @click="handleSelectAllBest"
      >
-      <Sparkles class="mr-2 h-4 w-4 text-green-500" />
+      <Sparkles class="mr-2 h-4 w-4 text-success" />
       Select All Best ({{ betterPricesCount }})
      </Button>
 
@@ -465,7 +465,7 @@ const handleSelectionToggle = (
          class="-ml-2 h-8 px-2 hover:bg-transparent"
          @click="toggleSort('best_price')"
         >
-         <span class="font-semibold text-xs text-green-600"> Best </span>
+         <span class="font-semibold text-xs text-success"> Best </span>
          <ArrowUpDown class="ml-1 h-3 w-3" />
         </Button>
        </TableHead>
@@ -545,7 +545,7 @@ const handleSelectionToggle = (
            <Badge
             v-if="group.primary.evaluation.order_is_best"
             variant="outline"
-            class="text-[9px] px-1 py-0 mt-0.5 border-green-500 text-green-600"
+            class="text-[9px] px-1 py-0 mt-0.5 border-success text-success"
            >
             Best
            </Badge>
@@ -565,7 +565,7 @@ const handleSelectionToggle = (
              isSupplierSelectedForProduct(group.primary.product_id, supplier.id)
               ? 'bg-primary/15 ring-1 ring-primary/40'
               : isBestSupplierPrice(group.primary, supplier.id)
-                ? 'bg-green-500/10 hover:bg-green-500/20'
+                ? 'bg-success/10 hover:bg-success/20'
                 : isBelowThreshold(group.primary, supplier.id)
                   ? 'opacity-50 hover:opacity-75'
                   : 'hover:bg-muted/50',
@@ -589,7 +589,7 @@ const handleSelectionToggle = (
                )
                 ? 'text-primary'
                 : isBestSupplierPrice(group.primary, supplier.id)
-                  ? 'text-green-600'
+                  ? 'text-success'
                   : isBelowThreshold(group.primary, supplier.id)
                     ? 'text-muted-foreground'
                     : '',
@@ -603,7 +603,7 @@ const handleSelectionToggle = (
              </span>
              <Check
               v-if="isBestSupplierPrice(group.primary, supplier.id)"
-              class="h-3 w-3 text-green-500 shrink-0"
+              class="h-3 w-3 text-success shrink-0"
              />
             </div>
             <!-- SKU Code for primary price -->
@@ -616,7 +616,7 @@ const handleSelectionToggle = (
              :class="[
               'text-[10px] tabular-nums',
               isBelowThreshold(group.primary, supplier.id)
-               ? 'text-amber-500 opacity-80 font-bold'
+               ? 'text-warning opacity-80 font-bold'
                : getDifferenceClass(
                   getSupplierPrice(group.primary, supplier.id)!
                    .difference_vs_order,
@@ -725,7 +725,7 @@ const handleSelectionToggle = (
             'text-xs font-bold tabular-nums',
             group.primary.evaluation.order_is_best
              ? 'text-muted-foreground'
-             : 'text-green-600',
+             : 'text-success',
            ]"
           >
            {{ formatCurrency(group.primary.evaluation.winning_price ?? 0) }}
@@ -742,7 +742,7 @@ const handleSelectionToggle = (
             !group.primary.evaluation.order_is_best &&
             (group.primary.evaluation.potential_savings ?? 0) > 0
            "
-           class="text-[10px] text-green-500 font-medium"
+           class="text-[10px] text-success font-medium"
           >
            Save
            {{ formatCurrency(group.primary.evaluation.potential_savings ?? 0) }}
@@ -757,9 +757,9 @@ const handleSelectionToggle = (
              <div class="inline-flex items-center justify-center cursor-help">
               <CheckCircle2
                v-if="group.primary.evaluation.threshold_met"
-               class="h-4 w-4 text-green-500"
+               class="h-4 w-4 text-success"
               />
-              <XCircle v-else class="h-4 w-4 text-red-400" />
+              <XCircle v-else class="h-4 w-4 text-destructive" />
              </div>
             </TooltipTrigger>
             <TooltipContent class="max-w-[220px]">
@@ -782,8 +782,8 @@ const handleSelectionToggle = (
                <span
                 :class="
                  group.primary.evaluation.supplier_price_difference_pct > 0
-                  ? 'text-green-500'
-                  : 'text-red-400'
+                  ? 'text-success'
+                  : 'text-destructive'
                 "
                >
                 {{
@@ -797,8 +797,8 @@ const handleSelectionToggle = (
                :class="[
                 'font-medium pt-1 border-t',
                 group.primary.evaluation.threshold_met
-                 ? 'text-green-500'
-                 : 'text-red-400',
+                 ? 'text-success'
+                 : 'text-destructive',
                ]"
               >
                {{
@@ -874,7 +874,7 @@ const handleSelectionToggle = (
             <Badge
              v-if="variant.evaluation.order_is_best"
              variant="outline"
-             class="text-[9px] px-1 py-0 mt-0.5 border-green-500/50 text-green-600/70"
+             class="text-[9px] px-1 py-0 mt-0.5 border-success/50 text-success/70"
             >
              Best
             </Badge>
@@ -894,7 +894,7 @@ const handleSelectionToggle = (
               isSupplierSelectedForProduct(variant.product_id, supplier.id)
                ? 'bg-primary/15 ring-1 ring-primary/40'
                : isBestSupplierPrice(variant, supplier.id)
-                 ? 'bg-green-500/10 hover:bg-green-500/20'
+                 ? 'bg-success/10 hover:bg-success/20'
                  : isBelowThreshold(variant, supplier.id)
                    ? 'opacity-50 hover:opacity-75'
                    : 'hover:bg-muted/50',
@@ -914,7 +914,7 @@ const handleSelectionToggle = (
                 isSupplierSelectedForProduct(variant.product_id, supplier.id)
                  ? 'text-primary'
                  : isBestSupplierPrice(variant, supplier.id)
-                   ? 'text-green-600'
+                   ? 'text-success'
                    : 'text-muted-foreground',
                ]"
               >
@@ -926,7 +926,7 @@ const handleSelectionToggle = (
               </span>
               <Check
                v-if="isBestSupplierPrice(variant, supplier.id)"
-               class="h-3 w-3 text-green-500 shrink-0"
+               class="h-3 w-3 text-success shrink-0"
               />
              </div>
              <!-- SKU Code for variant price -->
@@ -938,7 +938,7 @@ const handleSelectionToggle = (
               :class="[
                'text-[10px] tabular-nums',
                isBelowThreshold(variant, supplier.id)
-                ? 'text-amber-500 opacity-80 font-bold'
+                ? 'text-warning opacity-80 font-bold'
                 : getDifferenceClass(
                    getSupplierPrice(variant, supplier.id)!.difference_vs_order,
                   ),
@@ -1001,7 +1001,7 @@ const handleSelectionToggle = (
              'text-xs font-bold tabular-nums',
              variant.evaluation.order_is_best
               ? 'text-muted-foreground/70'
-              : 'text-green-600/70',
+              : 'text-success/70',
             ]"
            >
             {{ formatCurrency(variant.evaluation.winning_price ?? 0) }}
@@ -1017,7 +1017,7 @@ const handleSelectionToggle = (
              !variant.evaluation.order_is_best &&
              (variant.evaluation.potential_savings ?? 0) > 0
             "
-            class="text-[10px] text-green-500/70 font-medium"
+            class="text-[10px] text-success/70 font-medium"
            >
             Save {{ formatCurrency(variant.evaluation.potential_savings ?? 0) }}
            </div>
@@ -1031,9 +1031,9 @@ const handleSelectionToggle = (
               <div class="inline-flex items-center justify-center cursor-help">
                <CheckCircle2
                 v-if="variant.evaluation.threshold_met"
-                class="h-4 w-4 text-green-500/70"
+                class="h-4 w-4 text-success/70"
                />
-               <XCircle v-else class="h-4 w-4 text-red-400/70" />
+               <XCircle v-else class="h-4 w-4 text-destructive/70" />
               </div>
              </TooltipTrigger>
              <TooltipContent class="max-w-[220px]">
@@ -1056,8 +1056,8 @@ const handleSelectionToggle = (
                 <span
                  :class="
                   variant.evaluation.supplier_price_difference_pct > 0
-                   ? 'text-green-500'
-                   : 'text-red-400'
+                   ? 'text-success'
+                   : 'text-destructive'
                  "
                 >
                  {{
@@ -1071,8 +1071,8 @@ const handleSelectionToggle = (
                 :class="[
                  'font-medium pt-1 border-t',
                  variant.evaluation.threshold_met
-                  ? 'text-green-500'
-                  : 'text-red-400',
+                  ? 'text-success'
+                  : 'text-destructive',
                 ]"
                >
                 {{
@@ -1113,26 +1113,24 @@ const handleSelectionToggle = (
     class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground"
    >
     <div class="flex items-center gap-1">
-     <div
-      class="w-2.5 h-2.5 rounded bg-green-500/20 border border-green-500/40"
-     />
+     <div class="w-2.5 h-2.5 rounded bg-success/20 border border-success/40" />
      <span>Best supplier price</span>
     </div>
     <div class="flex items-center gap-1">
      <Badge
       variant="outline"
-      class="text-[9px] px-1 py-0 border-green-500 text-green-600"
+      class="text-[9px] px-1 py-0 border-success text-success"
      >
       Best
      </Badge>
      <span>Order has best price</span>
     </div>
     <div class="flex items-center gap-1">
-     <span class="text-green-600 font-medium">-€X</span>
+     <span class="text-success font-medium">-€X</span>
      <span>Cheaper than order</span>
     </div>
     <div class="flex items-center gap-1">
-     <span class="text-red-500 font-medium">+€X</span>
+     <span class="text-destructive font-medium">+€X</span>
      <span>More expensive</span>
     </div>
     <div class="flex items-center gap-1">
@@ -1148,15 +1146,15 @@ const handleSelectionToggle = (
      <span>Multiple pack sizes</span>
     </div>
     <div class="flex items-center gap-1">
-     <CheckCircle2 class="h-3.5 w-3.5 text-green-500" />
+     <CheckCircle2 class="h-3.5 w-3.5 text-success" />
      <span>Meets threshold</span>
     </div>
     <div class="flex items-center gap-1">
-     <XCircle class="h-3.5 w-3.5 text-red-400" />
+     <XCircle class="h-3.5 w-3.5 text-destructive" />
      <span>Below threshold</span>
     </div>
     <div class="flex items-center gap-1">
-     <span class="text-amber-500 font-medium">-€X</span>
+     <span class="text-warning font-medium">-€X</span>
      <span>Cheaper but below threshold</span>
     </div>
    </div>

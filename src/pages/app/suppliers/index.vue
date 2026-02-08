@@ -1,4 +1,10 @@
 <script setup lang="ts">
+definePage({
+ meta: {
+  allowedRoles: ['master'],
+ },
+})
+
 import { supabase } from '@/lib/supabaseClient'
 import { ref } from 'vue'
 import type { Tables } from '@/types/shared/database.types'

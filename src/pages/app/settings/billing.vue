@@ -132,27 +132,27 @@ const statusBadge = computed(() => {
   case 'trialing':
    return {
     text: 'Trial',
-    class: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    class: 'bg-primary/10 text-primary border-primary/20',
    }
   case 'active':
    return {
     text: 'Active',
-    class: 'bg-green-500/10 text-green-400 border-green-500/20',
+    class: 'bg-success/10 text-success border-success/20',
    }
   case 'past_due':
    return {
     text: 'Past Due',
-    class: 'bg-red-500/10 text-red-400 border-red-500/20',
+    class: 'bg-destructive/10 text-destructive border-destructive/20',
    }
   case 'canceled':
    return {
     text: 'Canceled',
-    class: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    class: 'bg-muted text-muted-foreground border-border',
    }
   default:
    return {
     text: 'No Plan',
-    class: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    class: 'bg-muted text-muted-foreground border-border',
    }
  }
 })
@@ -164,9 +164,9 @@ const getUsagePercentage = (used: number, limit: number) => {
 }
 
 const getUsageColor = (percentage: number) => {
- if (percentage >= 90) return 'bg-red-500'
- if (percentage >= 70) return 'bg-yellow-500'
- return 'bg-green-500'
+ if (percentage >= 90) return 'bg-destructive'
+ if (percentage >= 70) return 'bg-warning'
+ return 'bg-success'
 }
 
 // Actions - these will call Supabase Edge Functions later
@@ -201,13 +201,13 @@ const handleManageBilling = async () => {
   <!-- Trial Banner (shown only during trial) -->
   <Card
    v-if="subscription.status === 'trialing'"
-   class="border-blue-500/20 bg-blue-500/5"
+   class="border-primary/20 bg-primary/5"
   >
    <CardContent class="flex items-center gap-4 py-4">
     <div
-     class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10"
+     class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"
     >
-     <Sparkles class="h-5 w-5 text-blue-400" />
+     <Sparkles class="h-5 w-5 text-primary" />
     </div>
     <div class="flex-1">
      <p class="font-medium">
@@ -228,16 +228,16 @@ const handleManageBilling = async () => {
   <!-- Past Due Warning -->
   <Card
    v-if="subscription.status === 'past_due'"
-   class="border-red-500/20 bg-red-500/5"
+   class="border-destructive/20 bg-destructive/5"
   >
    <CardContent class="flex items-center gap-4 py-4">
     <div
-     class="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10"
+     class="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10"
     >
-     <AlertCircle class="h-5 w-5 text-red-400" />
+     <AlertCircle class="h-5 w-5 text-destructive" />
     </div>
     <div class="flex-1">
-     <p class="font-medium text-red-400">Payment Failed</p>
+     <p class="font-medium text-destructive">Payment Failed</p>
      <p class="text-sm text-muted-foreground">
       Your last payment failed. Please update your payment method to avoid
       service interruption.

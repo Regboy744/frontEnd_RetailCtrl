@@ -14,6 +14,12 @@ import SharedSheet from '@/components/shared/SharedSheet.vue'
 
 const { companies, fetchCompanies, saveCompany, removeCompany } = useCompanies()
 
+definePage({
+ meta: {
+  allowedRoles: ['master'],
+ },
+})
+
 // Fetch the companies through the useCompanies composable
 await fetchCompanies()
 

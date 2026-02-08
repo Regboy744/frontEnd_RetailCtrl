@@ -95,11 +95,11 @@ const emit = defineEmits<{
   <!-- Upload Progress -->
   <div
    v-if="uploadProgress"
-   class="bg-blue-500/10 p-4 rounded-lg border border-blue-500/30 space-y-3"
+   class="bg-primary/10 p-4 rounded-lg border border-primary/30 space-y-3"
   >
    <div class="flex items-center justify-between">
     <div>
-     <p class="text-sm font-medium text-blue-500">
+     <p class="text-sm font-medium text-primary">
       {{ uploadProgress.message }}
      </p>
      <p class="text-xs text-muted-foreground mt-1">
@@ -124,7 +124,7 @@ const emit = defineEmits<{
    <!-- Progress Bar -->
    <div class="w-full bg-muted rounded-full h-2 overflow-hidden">
     <div
-     class="bg-blue-500 h-full transition-all duration-300 ease-out"
+     class="bg-primary h-full transition-all duration-300 ease-out"
      :style="{
       width: `${uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0}%`,
      }"
@@ -136,10 +136,11 @@ const emit = defineEmits<{
     <span
      class="px-2 py-1 rounded-md"
      :class="{
-      'bg-green-500/20 text-green-500': uploadProgress.phase === 'fetching',
-      'bg-blue-500/20 text-blue-500': uploadProgress.phase === 'processing',
-      'bg-purple-500/20 text-purple-500': uploadProgress.phase === 'inserting',
-      'bg-emerald-500/20 text-emerald-500': uploadProgress.phase === 'complete',
+      'bg-success/20 text-success':
+       uploadProgress.phase === 'fetching' ||
+       uploadProgress.phase === 'complete',
+      'bg-primary/20 text-primary': uploadProgress.phase === 'processing',
+      'bg-chart-4/20 text-chart-4': uploadProgress.phase === 'inserting',
      }"
     >
      {{ uploadProgress.phase.toUpperCase() }}

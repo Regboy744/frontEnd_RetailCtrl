@@ -30,18 +30,16 @@ const remainingCount = computed(() => props.articleCodes.length - 8)
 
 <template>
  <Collapsible v-model:open="isExpanded">
-  <div
-   class="border border-amber-500/30 bg-amber-500/5 rounded-lg overflow-hidden"
-  >
+  <div class="border border-warning/30 bg-warning/5 rounded-lg overflow-hidden">
    <!-- Header -->
    <CollapsibleTrigger as-child>
     <button
-     class="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-500/5 transition-colors text-left"
+     class="w-full flex items-center justify-between px-4 py-3 hover:bg-warning/5 transition-colors text-left"
     >
      <div class="flex items-center gap-3">
-      <AlertTriangle class="h-4 w-4 text-amber-500 shrink-0" />
+      <AlertTriangle class="h-4 w-4 text-warning shrink-0" />
       <div>
-       <p class="text-sm font-medium text-amber-600">
+       <p class="text-sm font-medium text-warning">
         {{ articleCodes.length }} product{{
          articleCodes.length !== 1 ? 's' : ''
         }}
@@ -66,7 +64,7 @@ const remainingCount = computed(() => props.articleCodes.length - 8)
       <span
        v-for="code in visibleCodes"
        :key="code"
-       class="inline-flex items-center px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-xs font-mono text-amber-700"
+       class="inline-flex items-center px-2 py-0.5 rounded bg-warning/10 border border-warning/20 text-xs font-mono text-warning"
       >
        {{ code }}
       </span>
@@ -77,7 +75,7 @@ const remainingCount = computed(() => props.articleCodes.length - 8)
       v-if="hasMore && !isExpanded"
       variant="ghost"
       size="sm"
-      class="mt-2 h-7 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 px-2"
+      class="mt-2 h-7 text-xs text-warning hover:text-warning hover:bg-warning/10 px-2"
       @click.stop="isExpanded = true"
      >
       Show {{ remainingCount }} more

@@ -1,13 +1,12 @@
 import { ref, computed } from 'vue'
 import { useErrorStore } from '@/stores/error'
 import {
- companiesQuery,
- locationsByCompanyQuery,
  ordersQuery,
  orderDetailQuery,
- orderItemsCountQuery,
- type CompaniesQueryType,
- type LocationsByCompanyQueryType,
+ orderItemsForStatsQuery,
+ orderSavingsCalculationsQuery,
+ locationsWithCompanyQuery,
+ locationByIdWithCompanyQuery,
 } from '@/features/orders/api/queries'
 import type {
  OrderFilters,
@@ -15,19 +14,23 @@ import type {
  OrderWithLocation,
  OrderDetail,
  OrderItemWithProduct,
+ LocationOption,
 } from '@/features/orders/types'
+import { useAuthStore } from '@/stores/auth'
 
 export const useOrders = () => {
  const errorStore = useErrorStore()
+ const authStore = useAuthStore()
 
  // State
- const companies = ref<CompaniesQueryType>([])
- const locations = ref<LocationsByCompanyQueryType>([])
+ const locations = ref<LocationOption[]>([])
+ const locationsByCompany = ref<Map<string, LocationOption[]>>(new Map())
  const orders = ref<OrderWithLocation[]>([])
  const orderDetail = ref<OrderDetail | null>(null)
  const isLoading = ref(false)
  const isLoadingLocations = ref(false)
  const isLoadingDetail = ref(false)
+ const totalSaved = ref(0)
 
  // Filters
  const filters = ref<OrderFilters>({
@@ -47,57 +50,133 @@ export const useOrders = () => {
    0,
   )
 
-  // Calculate total saved from baseline_unit_price
-  // Note: We'll need to fetch order items to calculate savings
-  // For now, return 0 - we can enhance this later
-  const totalSaved = 0
-
   const avgOrderValue = totalOrders > 0 ? totalAmount / totalOrders : 0
 
   return {
    totalOrders,
    totalAmount,
-   totalSaved,
+   totalSaved: totalSaved.value,
    avgOrderValue,
   }
  })
 
- // Fetch companies for dropdown
- const fetchCompanies = async () => {
-  isLoading.value = true
-  try {
-   const { data, error, status } = await companiesQuery()
+ const applyRoleDefaults = () => {
+  const role = authStore.userRole
 
-   if (error) {
-    errorStore.setError({ error, customCode: status })
-    return null
-   }
+  if (role === 'manager') {
+   filters.value.companyId = authStore.companyId
+   filters.value.locationId = authStore.locationId
+   return
+  }
 
-   companies.value = data ?? []
-   return data
-  } finally {
-   isLoading.value = false
+  if (role === 'admin') {
+   filters.value.companyId = authStore.companyId
+   filters.value.locationId = null
+   return
+  }
+
+  filters.value.companyId = null
+  filters.value.locationId = null
+ }
+
+ const mapLocation = (row: {
+  id: string
+  name: string
+  location_number: number
+  company_id: string
+  company?: { id: string; name: string } | null
+ }): LocationOption => {
+  return {
+   id: row.id,
+   name: row.name,
+   location_number: row.location_number,
+   company_id: row.company_id,
+   company_name: row.company?.name || 'Unknown company',
   }
  }
 
- // Fetch locations by company
- const fetchLocations = async (companyId: string) => {
-  if (!companyId) {
-   locations.value = []
-   return []
-  }
-
+ // Load locations based on role
+ const loadLocations = async () => {
   isLoadingLocations.value = true
+  locations.value = []
+  locationsByCompany.value = new Map()
+
   try {
-   const { data, error, status } = await locationsByCompanyQuery(companyId)
+   const role = authStore.userRole
+
+   if (role === 'manager') {
+    if (!authStore.locationId) {
+     errorStore.setError({
+      error: 'Your account is not linked to a location.',
+      customCode: 403,
+     })
+     return
+    }
+
+    const { data, error, status } = await locationByIdWithCompanyQuery(
+     authStore.locationId,
+    )
+
+    if (error) {
+     errorStore.setError({ error, customCode: status })
+     return
+    }
+
+    if (data) {
+     const location = mapLocation(data)
+     locations.value = [location]
+     if (!filters.value.locationId) {
+      filters.value.locationId = location.id
+     }
+     if (!filters.value.companyId) {
+      filters.value.companyId = location.company_id ?? null
+     }
+    }
+
+    return
+   }
+
+   if (role === 'admin') {
+    if (!authStore.companyId) {
+     errorStore.setError({
+      error: 'Your account is not linked to a company.',
+      customCode: 403,
+     })
+     return
+    }
+
+    const { data, error, status } = await locationsWithCompanyQuery(
+     authStore.companyId,
+    )
+
+    if (error) {
+     errorStore.setError({ error, customCode: status })
+     return
+    }
+
+    locations.value = (data ?? []).map(mapLocation)
+    return
+   }
+
+   const { data, error, status } = await locationsWithCompanyQuery()
 
    if (error) {
     errorStore.setError({ error, customCode: status })
-    return null
+    return
    }
 
-   locations.value = data ?? []
-   return data
+   const grouped = new Map<string, LocationOption[]>()
+
+   for (const row of data ?? []) {
+    const location = mapLocation(row)
+    const companyName = location.company_name || 'Unknown company'
+    const list = grouped.get(companyName) || []
+    list.push(location)
+    grouped.set(companyName, list)
+    locations.value.push(location)
+   }
+
+   locationsByCompany.value = grouped
   } finally {
    isLoadingLocations.value = false
   }
@@ -128,14 +207,16 @@ export const useOrders = () => {
 
  // Fetch orders with current filters
  const fetchOrders = async () => {
-  if (!filters.value.companyId) {
+  if (authStore.userRole === 'manager' && !filters.value.locationId) {
    orders.value = []
+   totalSaved.value = 0
    return []
   }
 
   // Don't fetch if date range is invalid
   if (!isDateRangeValid()) {
    orders.value = []
+   totalSaved.value = 0
    return []
   }
 
@@ -145,35 +226,72 @@ export const useOrders = () => {
 
    if (error) {
     errorStore.setError({ error, customCode: status })
+    totalSaved.value = 0
     return null
    }
 
-   // Fetch item counts for each order
-   const orderIds = data?.map((order) => order.id) ?? []
-   if (orderIds.length > 0) {
-    const { data: itemsData } = await orderItemsCountQuery(orderIds)
+   const ordersData = data ?? []
+   const orderIds = ordersData.map((order) => order.id)
+   totalSaved.value = 0
 
-    // Count items per order
-    const itemCounts = (itemsData ?? []).reduce(
-     (acc, item) => {
-      acc[item.order_id] = (acc[item.order_id] || 0) + 1
-      return acc
-     },
-     {} as Record<string, number>,
-    )
-
-    // Add item counts to orders
-    const ordersWithCounts = (data ?? []).map((order) => ({
-     ...order,
-     itemsCount: itemCounts[order.id] || 0,
-    }))
-
-    orders.value = ordersWithCounts
-    return ordersWithCounts
+   if (orderIds.length === 0) {
+    orders.value = ordersData
+    return ordersData
    }
 
-   orders.value = data ?? []
-   return data
+   const {
+    data: itemsData,
+    error: itemsError,
+    status: itemsStatus,
+   } = await orderItemsForStatsQuery(orderIds)
+
+   if (itemsError) {
+    errorStore.setError({ error: itemsError, customCode: itemsStatus })
+   }
+
+   const items = itemsData ?? []
+
+   // Count items per order
+   const itemCounts = items.reduce(
+    (acc, item) => {
+     acc[item.order_id] = (acc[item.order_id] || 0) + 1
+     return acc
+    },
+    {} as Record<string, number>,
+   )
+
+   // Add item counts to orders
+   const ordersWithCounts = ordersData.map((order) => ({
+    ...order,
+    itemsCount: itemCounts[order.id] || 0,
+   }))
+
+   orders.value = ordersWithCounts
+
+   const orderItemIds = items.map((item) => item.id)
+   if (orderItemIds.length > 0) {
+    const {
+     data: savingsData,
+     error: savingsError,
+     status: savingsStatus,
+    } = await orderSavingsCalculationsQuery(
+     filters.value.companyId,
+     orderItemIds,
+    )
+
+    if (savingsError) {
+     errorStore.setError({ error: savingsError, customCode: savingsStatus })
+    } else {
+     const savings = savingsData ?? []
+     totalSaved.value = savings.reduce((sum, item) => {
+      const delta = item.delta_vs_baseline ?? 0
+      if (delta < 0) return sum + -delta
+      return sum
+     }, 0)
+    }
+   }
+
+   return ordersWithCounts
   } finally {
    isLoading.value = false
   }
@@ -224,13 +342,21 @@ export const useOrders = () => {
    ...newFilters,
   }
 
-  // If company changed, reset location and fetch new locations
-  if (newFilters.companyId !== undefined) {
-   if (newFilters.companyId !== filters.value.companyId) {
-    filters.value.locationId = null
-   }
-   if (newFilters.companyId) {
-    await fetchLocations(newFilters.companyId)
+  // If location changed, derive company context
+  if (newFilters.locationId !== undefined) {
+   if (newFilters.locationId) {
+    const location = locations.value.find(
+     (item) => item.id === newFilters.locationId,
+    )
+    if (location?.company_id) {
+     filters.value.companyId = location.company_id
+    }
+   } else {
+    if (authStore.userRole === 'admin') {
+     filters.value.companyId = authStore.companyId
+    } else if (authStore.userRole === 'master') {
+     filters.value.companyId = null
+    }
    }
   }
 
@@ -241,15 +367,16 @@ export const useOrders = () => {
  // Reset filters
  const resetFilters = () => {
   filters.value = {
-   companyId: null,
-   locationId: null,
+   companyId: filters.value.companyId,
+   locationId: filters.value.locationId,
    dateFrom: null,
    dateTo: null,
    status: [],
    datePreset: undefined,
   }
-  locations.value = []
+  applyRoleDefaults()
   orders.value = []
+  totalSaved.value = 0
  }
 
  // Apply date preset
@@ -297,10 +424,16 @@ export const useOrders = () => {
   })
  }
 
+ const initialize = async () => {
+  applyRoleDefaults()
+  await loadLocations()
+  await fetchOrders()
+ }
+
  return {
   // State
-  companies,
   locations,
+  locationsByCompany,
   orders,
   orderDetail,
   filters,
@@ -310,13 +443,13 @@ export const useOrders = () => {
   isLoadingDetail,
 
   // Methods
-  fetchCompanies,
-  fetchLocations,
+  loadLocations,
   fetchOrders,
   fetchOrderDetail,
   updateFilters,
   resetFilters,
   applyDatePreset,
+  initialize,
 
   // Validation
   isDateRangeValid,

@@ -5,6 +5,7 @@ import {
  Select,
  SelectContent,
  SelectGroup,
+ SelectLabel,
  SelectItem,
  SelectTrigger,
  SelectValue,
@@ -15,17 +16,15 @@ import { Badge } from '@/components/ui/badge'
 import { FieldError } from '@/components/ui/field'
 import { DateRangePicker } from '@/components/ui/date-picker'
 import { X, Filter, Building2, Calendar, CheckCircle } from 'lucide-vue-next'
-import type {
- OrderFilters,
- CompanyOption,
- LocationOption,
-} from '@/features/orders/types'
+import type { OrderFilters, LocationOption } from '@/features/orders/types'
 
 interface Props {
  filters: OrderFilters
- companies: CompanyOption[]
  locations: LocationOption[]
+ locationsByCompany?: Map<string, LocationOption[]>
  isLoadingLocations?: boolean
+ isLocationLocked?: boolean
+ allowAllLocations?: boolean
 }
 
 interface Emits {
@@ -51,10 +50,10 @@ const datePresets = [
 
 // Status options with labels
 const statusOptions = [
- { value: 'pending', label: 'Pending', color: 'bg-yellow-500' },
- { value: 'confirmed', label: 'Confirmed', color: 'bg-blue-500' },
- { value: 'delivered', label: 'Delivered', color: 'bg-green-500' },
- { value: 'cancelled', label: 'Cancelled', color: 'bg-red-500' },
+ { value: 'pending', label: 'Pending', color: 'bg-warning' },
+ { value: 'confirmed', label: 'Confirmed', color: 'bg-primary' },
+ { value: 'delivered', label: 'Delivered', color: 'bg-success' },
+ { value: 'cancelled', label: 'Cancelled', color: 'bg-destructive' },
 ]
 
 // Date validation
@@ -81,13 +80,29 @@ const validateDateRange = (
 }
 
 // Computed
-const isLocationDisabled = computed(() => !props.filters.companyId)
+const isLocationDisabled = computed(
+ () => !!props.isLocationLocked || !!props.isLoadingLocations,
+)
 const isCustomDateRange = computed(() => props.filters.datePreset === 'custom')
+
+const selectedLocation = computed(
+ () =>
+  props.locations.find(
+   (location) => location.id === props.filters.locationId,
+  ) || null,
+)
+
+const selectedCompanyName = computed(
+ () => selectedLocation.value?.company_name || null,
+)
+
+const showGroupedLocations = computed(
+ () => props.locationsByCompany && props.locationsByCompany.size > 0,
+)
 
 // Check if any filters are active
 const hasActiveFilters = computed(() => {
  return (
-  props.filters.companyId !== null ||
   props.filters.locationId !== null ||
   props.filters.dateFrom !== null ||
   props.filters.dateTo !== null ||
@@ -96,11 +111,6 @@ const hasActiveFilters = computed(() => {
 })
 
 // Handlers
-const handleCompanyChange = (value: unknown) => {
- const companyId = value && String(value) !== 'none' ? String(value) : null
- emit('update:filters', { companyId, locationId: null })
-}
-
 const handleLocationChange = (value: unknown) => {
  const locationId = value && String(value) !== 'all' ? String(value) : null
  emit('update:filters', { locationId })
@@ -190,7 +200,7 @@ const handleReset = () => {
    </Badge>
   </div>
 
-  <!-- Company & Location Group -->
+  <!-- Location Group -->
   <div class="space-y-3">
    <div
     class="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider"
@@ -200,32 +210,6 @@ const handleReset = () => {
    </div>
 
    <div class="rounded-lg bg-muted/30 p-4 space-y-4">
-    <!-- Company Dropdown -->
-    <div class="space-y-1.5">
-     <Label for="company-filter" class="text-xs">Company</Label>
-     <Select
-      :model-value="filters.companyId || 'none'"
-      @update:model-value="handleCompanyChange"
-     >
-      <SelectTrigger id="company-filter" class="h-9 w-full">
-       <SelectValue placeholder="Select company" />
-      </SelectTrigger>
-      <SelectContent>
-       <SelectGroup>
-        <SelectItem value="none" disabled>Select a company</SelectItem>
-        <SelectItem
-         v-for="company in companies"
-         :key="company.id"
-         :value="company.id"
-        >
-         {{ company.name }}
-        </SelectItem>
-       </SelectGroup>
-      </SelectContent>
-     </Select>
-    </div>
-
-    <!-- Location Dropdown -->
     <div class="space-y-1.5">
      <Label for="location-filter" class="text-xs">Location</Label>
      <Select
@@ -236,13 +220,33 @@ const handleReset = () => {
       <SelectTrigger id="location-filter" class="h-9 w-full">
        <SelectValue
         :placeholder="
-         isLocationDisabled ? 'Select company first' : 'All locations'
+         isLocationDisabled ? 'Loading locations...' : 'Select location'
         "
        />
       </SelectTrigger>
       <SelectContent>
-       <SelectGroup>
+       <SelectGroup v-if="allowAllLocations">
         <SelectItem value="all">All Locations</SelectItem>
+       </SelectGroup>
+       <template v-if="showGroupedLocations">
+        <SelectGroup
+         v-for="[companyName, companyLocations] in locationsByCompany"
+         :key="companyName"
+        >
+         <SelectLabel class="flex items-center gap-2">
+          <Building2 class="h-3 w-3" />
+          {{ companyName }}
+         </SelectLabel>
+         <SelectItem
+          v-for="location in companyLocations"
+          :key="location.id"
+          :value="location.id"
+         >
+          {{ location.location_number }} - {{ location.name }}
+         </SelectItem>
+        </SelectGroup>
+       </template>
+       <SelectGroup v-else>
         <SelectItem
          v-for="location in locations"
          :key="location.id"
@@ -253,6 +257,16 @@ const handleReset = () => {
        </SelectGroup>
       </SelectContent>
      </Select>
+     <p v-if="selectedLocation" class="text-xs text-muted-foreground">
+      Company:
+      <span class="font-medium">{{ selectedCompanyName }}</span> · Location:
+      <span class="font-medium">
+       {{ selectedLocation.name }} (#{{ selectedLocation.location_number }})
+      </span>
+     </p>
+     <p v-else class="text-xs text-muted-foreground">
+      Orders are scoped by location.
+     </p>
     </div>
    </div>
   </div>
@@ -326,7 +340,7 @@ const handleReset = () => {
       :class="[
        'cursor-pointer transition-all text-xs justify-center py-1.5 w-full rounded-sm',
        filters.status.includes(status.value)
-        ? status.color + ' text-white hover:opacity-90'
+        ? status.color + ' text-primary-foreground hover:opacity-90'
         : 'hover:bg-muted',
       ]"
       @click="toggleStatus(status.value)"

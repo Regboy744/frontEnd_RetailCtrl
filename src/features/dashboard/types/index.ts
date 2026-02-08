@@ -26,8 +26,6 @@ export interface DashboardKpis {
  savedTotal: number
  overspendTotal: number
  savingsRate: number
- missedSavingsTotal: number
- missedLinesCount: number
 }
 
 export interface TopProductRow {
@@ -57,16 +55,14 @@ export interface CredentialIssueRow {
  lastErrorMessage: string | null
 }
 
-export interface ExpiringPriceRow {
- id: string
+export interface SupplierSummaryRow {
+ supplierId: string
  supplierName: string
- productDescription: string
- articleCode: string
- negotiatedPrice: number
- validUntil: string
+ ordersCount: number
+ spendTotal: number
+ savedTotal: number
 }
 
 export interface DashboardAlerts {
  credentialIssues: CredentialIssueRow[]
- expiringPrices: ExpiringPriceRow[]
 }

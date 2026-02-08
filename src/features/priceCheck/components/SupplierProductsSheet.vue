@@ -169,17 +169,14 @@ const totalSupplierCost = computed(() => {
         <TableCell v-if="!isLocalOrder" class="text-right">
          <span
           v-if="getSupplierPrice(product) !== null"
-          class="text-green-600 font-medium"
+          class="text-success font-medium"
          >
           {{ formatCurrency(getSupplierPrice(product)!) }}
          </span>
          <span v-else class="text-muted-foreground">-</span>
         </TableCell>
         <TableCell v-if="!isLocalOrder" class="text-right">
-         <span
-          v-if="getSavings(product) > 0"
-          class="text-green-600 font-medium"
-         >
+         <span v-if="getSavings(product) > 0" class="text-success font-medium">
           {{ formatCurrency(getSavings(product)) }}
          </span>
          <span v-else class="text-muted-foreground">-</span>
@@ -197,7 +194,7 @@ const totalSupplierCost = computed(() => {
      </div>
      <div v-if="!isLocalOrder" class="flex justify-between text-sm">
       <span class="text-muted-foreground">Total Supplier Cost:</span>
-      <span class="font-medium text-green-600">
+      <span class="font-medium text-success">
        {{ formatCurrency(totalSupplierCost) }}
       </span>
      </div>
@@ -206,7 +203,7 @@ const totalSupplierCost = computed(() => {
       class="flex justify-between text-lg font-semibold pt-2 border-t"
      >
       <span>Total Savings:</span>
-      <span class="text-green-600">
+      <span class="text-success">
        {{ formatCurrency(totalSavings) }}
       </span>
      </div>

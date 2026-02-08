@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from '@/composables/auth'
 import { Button } from '@/components/ui/button'
@@ -135,36 +135,47 @@ onMounted(() => {
   emailInput.focus()
  }
 })
+
+onUnmounted(() => {
+ if (backoffInterval) {
+  clearInterval(backoffInterval)
+  backoffInterval = null
+ }
+})
 </script>
 
 <template>
  <div
-  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-12"
+  class="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary to-background px-4 py-12"
  >
   <!-- Background decorations -->
   <div class="absolute inset-0 overflow-hidden">
    <div
-    class="absolute top-20 left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"
+    class="absolute top-20 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl"
    ></div>
    <div
-    class="absolute bottom-20 right-10 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"
+    class="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
    ></div>
   </div>
 
   <Card
-   class="w-full max-w-md backdrop-blur-lg bg-slate-800/50 border-slate-700 relative z-10"
+   class="w-full max-w-md backdrop-blur-lg bg-card/50 border-border relative z-10"
   >
    <CardHeader class="space-y-4 text-center pb-2">
     <!-- Logo/Brand -->
     <div class="flex justify-center">
-     <div class="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
-      <ShoppingCart class="w-8 h-8 text-blue-400" />
+     <div class="p-3 bg-primary/10 rounded-xl border border-primary/20">
+      <ShoppingCart class="w-8 h-8 text-primary" />
      </div>
     </div>
 
     <div class="space-y-2">
-     <CardTitle class="text-2xl font-bold text-white"> Welcome back </CardTitle>
-     <p class="text-slate-400 text-sm">Sign in to your Retail Ctrl account</p>
+     <CardTitle class="text-2xl font-bold text-foreground">
+      Welcome back
+     </CardTitle>
+     <p class="text-muted-foreground text-sm">
+      Sign in to your Retail Ctrl account
+     </p>
     </div>
    </CardHeader>
 
@@ -172,9 +183,9 @@ onMounted(() => {
     <!-- Success Message -->
     <div
      v-if="successMessage"
-     class="flex items-start gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20"
+     class="flex items-start gap-3 p-3 rounded-lg bg-success/10 border border-success/20"
     >
-     <div class="text-sm text-green-400">
+     <div class="text-sm text-success">
       {{ successMessage }}
      </div>
     </div>
@@ -182,10 +193,10 @@ onMounted(() => {
     <!-- Error Message -->
     <div
      v-if="displayError"
-     class="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20"
+     class="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20"
     >
-     <AlertCircle class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-     <div class="text-sm text-red-400">
+     <AlertCircle class="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+     <div class="text-sm text-destructive">
       {{ displayError }}
       <span v-if="backoffSeconds > 0" class="block mt-1">
        Please wait {{ backoffSeconds }} second{{
@@ -200,10 +211,10 @@ onMounted(() => {
     <form @submit.prevent="handleSubmit" class="space-y-4">
      <!-- Email Field -->
      <div class="space-y-2">
-      <Label for="email" class="text-slate-300">Email</Label>
+      <Label for="email" class="text-foreground/80">Email</Label>
       <div class="relative">
        <Mail
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
        />
        <Input
         id="email"
@@ -213,11 +224,11 @@ onMounted(() => {
         autocomplete="email"
         :disabled="isLoading"
         :aria-invalid="!!validationErrors.email"
-        class="pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+        class="pl-10 bg-card/50 border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
         @input="handleInputChange"
        />
       </div>
-      <p v-if="validationErrors.email" class="text-sm text-red-400">
+      <p v-if="validationErrors.email" class="text-sm text-destructive">
        {{ validationErrors.email }}
       </p>
      </div>
@@ -225,17 +236,17 @@ onMounted(() => {
      <!-- Password Field -->
      <div class="space-y-2">
       <div class="flex items-center justify-between">
-       <Label for="password" class="text-slate-300">Password</Label>
+       <Label for="password" class="text-foreground/80">Password</Label>
        <RouterLink
         to="/auth/forgot-password"
-        class="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+        class="text-sm text-primary hover:text-primary/80 transition-colors"
        >
         Forgot password?
        </RouterLink>
       </div>
       <div class="relative">
        <Lock
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+        class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
        />
        <Input
         id="password"
@@ -245,12 +256,12 @@ onMounted(() => {
         autocomplete="current-password"
         :disabled="isLoading"
         :aria-invalid="!!validationErrors.password"
-        class="pl-10 pr-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+        class="pl-10 pr-10 bg-card/50 border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
         @input="handleInputChange"
        />
        <button
         type="button"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80 transition-colors"
         @click="togglePasswordVisibility"
         :aria-label="showPassword ? 'Hide password' : 'Show password'"
        >
@@ -258,7 +269,7 @@ onMounted(() => {
         <Eye v-else class="w-4 h-4" />
        </button>
       </div>
-      <p v-if="validationErrors.password" class="text-sm text-red-400">
+      <p v-if="validationErrors.password" class="text-sm text-destructive">
        {{ validationErrors.password }}
       </p>
      </div>
@@ -269,11 +280,11 @@ onMounted(() => {
        id="remember"
        v-model:checked="rememberMe"
        :disabled="isLoading"
-       class="border-slate-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+       class="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
       />
       <Label
        for="remember"
-       class="text-sm text-slate-400 cursor-pointer select-none"
+       class="text-sm text-muted-foreground cursor-pointer select-none"
       >
        Remember me for 30 days
       </Label>
@@ -282,7 +293,7 @@ onMounted(() => {
      <!-- Submit Button -->
      <Button
       type="submit"
-      class="w-full bg-blue-600 hover:bg-blue-700 text-white"
+      class="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
       :disabled="isSubmitDisabled"
      >
       <Loader2 v-if="isLoading" class="w-4 h-4 mr-2 animate-spin" />
@@ -291,8 +302,10 @@ onMounted(() => {
     </form>
 
     <!-- Footer -->
-    <div class="text-center pt-4 border-t border-slate-700">
-     <p class="text-sm text-slate-400">Need help? Contact your administrator</p>
+    <div class="text-center pt-4 border-t border-border">
+     <p class="text-sm text-muted-foreground">
+      Need help? Contact your administrator
+     </p>
     </div>
    </CardContent>
   </Card>
