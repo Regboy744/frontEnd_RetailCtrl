@@ -40,6 +40,23 @@ const pageTitleStore = usePageTitleStore()
 const authStore = useAuthStore()
 const errorStore = useErrorStore()
 
+const validTabs = ['overview', 'locations', 'settings', 'special-prices']
+const activeTab = ref(
+ validTabs.includes(route.query.tab as string)
+  ? (route.query.tab as string)
+  : 'overview',
+)
+
+// Sync tab when navigating with ?tab= query param
+watch(
+ () => route.query.tab,
+ (tab) => {
+  if (typeof tab === 'string' && validTabs.includes(tab)) {
+   activeTab.value = tab
+  }
+ },
+)
+
 const companyId = computed(() => route.params.id as string)
 const companyIdRef = toRef(companyId)
 
@@ -173,7 +190,7 @@ function goBack() {
   </div>
 
   <!-- Tabs -->
-  <Tabs default-value="overview" class="space-y-6">
+  <Tabs v-model="activeTab" class="space-y-6">
    <TabsList class="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
     <TabsTrigger value="overview" class="flex items-center gap-2">
      <Building2 class="h-4 w-4" />

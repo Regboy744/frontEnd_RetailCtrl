@@ -31,14 +31,22 @@ import {
  AlertTriangle,
  Package,
  ShoppingCart,
+ KeyRound,
+ Settings,
 } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import { useOrderSubmission } from '../composables/useOrderSubmission'
+import { useAuthStore } from '@/stores/auth'
 import { computed, ref } from 'vue'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const {
  showResultsDialog,
  closeResultsDialog,
  submitResult,
+ selectedLocation,
  openBasket,
  openBaskets,
  clearSelections,
@@ -58,6 +66,26 @@ const hasFailedItems = computed(() => {
  if (!submitResult.value) return false
  return submitResult.value.results.some((r) => r.items_failed > 0)
 })
+
+// Computed: are ALL failures due to missing credentials
+const allFailuresAreCredentialErrors = computed(() => {
+ if (!submitResult.value) return false
+ const failedResults = submitResult.value.results.filter((r) => !r.success)
+ if (failedResults.length === 0) return false
+ return failedResults.every((r) => r.error_type === 'missing_credentials')
+})
+
+// Computed: company ID for settings navigation
+const companyId = computed(() => {
+ return selectedLocation.value?.company_id ?? authStore.companyId
+})
+
+// Navigate to company settings where credentials are managed
+function goToCompanySettings() {
+ if (!companyId.value) return
+ handleClose()
+ router.push(`/app/companies/${companyId.value}?tab=locations`)
+}
 
 // Toggle supplier details
 function toggleSupplierDetails(supplierId: string) {
@@ -255,9 +283,47 @@ function handleOpenAllBaskets() {
        </CollapsibleContent>
       </Collapsible>
 
-      <!-- Error message -->
+      <!-- Error message: Missing credentials -->
       <div
-       v-if="result.error && !result.success"
+       v-if="result.error_type === 'missing_credentials' && !result.success"
+       class="px-4 py-3 bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200 dark:border-amber-800"
+      >
+       <div class="flex items-start gap-3">
+        <KeyRound
+         class="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"
+        />
+        <div class="space-y-1 min-w-0">
+         <p class="text-sm font-medium text-amber-800 dark:text-amber-300">
+          Missing Credentials
+         </p>
+         <p class="text-xs text-amber-700 dark:text-amber-400">
+          No credentials configured for
+          <span class="font-semibold">{{ result.supplier_name }}</span>
+          <template v-if="selectedLocation">
+           at
+           <span class="font-semibold">{{
+            selectedLocation.name
+           }}</span> </template
+          >. Please add supplier credentials for this location in your company
+          settings.
+         </p>
+         <Button
+          v-if="companyId"
+          variant="outline"
+          size="sm"
+          class="mt-2 h-7 text-xs border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+          @click="goToCompanySettings"
+         >
+          <Settings class="mr-1.5 h-3 w-3" />
+          Go to Company Settings
+         </Button>
+        </div>
+       </div>
+      </div>
+
+      <!-- Error message: Generic errors -->
+      <div
+       v-else-if="result.error && !result.success"
        class="px-4 py-2 bg-destructive/5 border-t text-sm text-destructive"
       >
        {{ result.error }}
@@ -287,9 +353,41 @@ function handleOpenAllBaskets() {
      </div>
     </div>
 
-    <!-- Warning for failed items -->
+    <!-- Warning for failed items: credential-specific -->
     <div
-     v-if="hasFailedItems"
+     v-if="hasFailedItems && allFailuresAreCredentialErrors"
+     class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3"
+    >
+     <div class="flex items-start gap-2">
+      <KeyRound class="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+      <div class="text-sm text-amber-800 dark:text-amber-300">
+       <p class="font-medium">Supplier credentials required</p>
+       <p class="mt-1 text-amber-700 dark:text-amber-400">
+        None of the selected suppliers have credentials configured for
+        <template v-if="selectedLocation">
+         <span class="font-semibold">{{ selectedLocation.name }}</span
+         >.
+        </template>
+        <template v-else> this location. </template>
+        Please add them in your company settings before submitting orders.
+       </p>
+       <Button
+        v-if="companyId"
+        variant="outline"
+        size="sm"
+        class="mt-2 h-7 text-xs border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+        @click="goToCompanySettings"
+       >
+        <Settings class="mr-1.5 h-3 w-3" />
+        Go to Company Settings
+       </Button>
+      </div>
+     </div>
+    </div>
+
+    <!-- Warning for failed items: generic -->
+    <div
+     v-else-if="hasFailedItems"
      class="bg-warning/10 border border-warning/30 rounded-lg p-3"
     >
      <div class="flex items-start gap-2">

@@ -470,6 +470,9 @@ export interface FailedItem {
  details?: string
 }
 
+/** Error type codes for structured error handling */
+export type OrderErrorType = 'missing_credentials' | 'no_handler' | 'general'
+
 export interface SupplierOrderResult {
  supplier_id: string
  supplier_name: string
@@ -480,6 +483,8 @@ export interface SupplierOrderResult {
  items_failed: number
  failed_items: FailedItem[]
  error?: string
+ /** Structured error type for rendering context-specific UI */
+ error_type?: OrderErrorType
 }
 
 export interface OrderSubmitSummary {
