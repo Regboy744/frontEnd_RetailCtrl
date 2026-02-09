@@ -35,6 +35,7 @@
     "@vueuse/core": "^14.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jsbarcode": "^3.12.3",
     "lucide-vue-next": "^0.561.0",
     "papaparse": "^5.5.3",
     "pinia": "^3.0.4",

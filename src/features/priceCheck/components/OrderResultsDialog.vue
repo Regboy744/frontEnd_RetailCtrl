@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
+ Barcode,
  CheckCircle2,
  XCircle,
  ExternalLink,
@@ -38,6 +39,9 @@ import { useRouter } from 'vue-router'
 import { useOrderSubmission } from '../composables/useOrderSubmission'
 import { useAuthStore } from '@/stores/auth'
 import { computed, ref } from 'vue'
+import { orderDetailQuery } from '@/features/orders/api/queries'
+import type { OrderDetail } from '@/features/orders/types'
+import OrderBarcodeSheet from '@/features/orders/components/OrderBarcodeSheet.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -54,6 +58,10 @@ const {
 
 // Track expanded supplier details
 const expandedSuppliers = ref<Set<string>>(new Set())
+const barcodeSheetOpen = ref(false)
+const barcodeOrder = ref<OrderDetail | null>(null)
+const isLoadingBarcodeOrder = ref(false)
+const barcodeOrderError = ref<string | null>(null)
 
 // Computed: has any successful results
 const hasSuccessfulResults = computed(() => {
@@ -78,6 +86,17 @@ const allFailuresAreCredentialErrors = computed(() => {
 // Computed: company ID for settings navigation
 const companyId = computed(() => {
  return selectedLocation.value?.company_id ?? authStore.companyId
+})
+
+const canOpenBarcodes = computed(() => {
+ if (!submitResult.value) return false
+
+ const hasPersistedItems =
+  typeof submitResult.value.persisted_items_count === 'number'
+   ? submitResult.value.persisted_items_count > 0
+   : submitResult.value.summary.total_items_added > 0
+
+ return Boolean(submitResult.value.order_id && hasPersistedItems)
 })
 
 // Navigate to company settings where credentials are managed
@@ -111,6 +130,9 @@ function getFailureReasonText(reason: string): string {
 
 // Handle close and cleanup
 function handleClose() {
+ barcodeSheetOpen.value = false
+ barcodeOrder.value = null
+ barcodeOrderError.value = null
  closeResultsDialog()
  // Clear selections after successful submission
  if (hasSuccessfulResults.value) {
@@ -121,6 +143,57 @@ function handleClose() {
 // Handle open all baskets
 function handleOpenAllBaskets() {
  openBaskets()
+}
+
+async function handleOpenBarcodes() {
+ const orderId = submitResult.value?.order_id
+
+ if (!orderId) {
+  barcodeOrderError.value =
+   'No persisted order ID was returned. Open this order from the Orders page to print labels.'
+  barcodeSheetOpen.value = true
+  return
+ }
+
+ barcodeSheetOpen.value = true
+ isLoadingBarcodeOrder.value = true
+ barcodeOrderError.value = null
+
+ try {
+  const { data, error } = await orderDetailQuery(orderId)
+
+  if (error) {
+   barcodeOrder.value = null
+   barcodeOrderError.value =
+    error.message || 'Failed to load order labels for this submission.'
+   return
+  }
+
+  if (!data) {
+   barcodeOrder.value = null
+   barcodeOrderError.value =
+    'Order was not found. Please refresh and try again.'
+   return
+  }
+
+  barcodeOrder.value = {
+   ...data,
+   order_items: data.order_items ?? [],
+  } as OrderDetail
+
+  if (barcodeOrder.value.order_items.length === 0) {
+   barcodeOrderError.value =
+    'This order has no persisted line items available for barcode labels.'
+  }
+ } catch (error) {
+  barcodeOrder.value = null
+  barcodeOrderError.value =
+   error instanceof Error
+    ? error.message
+    : 'Unexpected error while loading barcode labels.'
+ } finally {
+  isLoadingBarcodeOrder.value = false
+ }
 }
 </script>
 
@@ -346,10 +419,20 @@ function handleOpenAllBaskets() {
         </div>
        </div>
       </div>
-      <Button @click="handleOpenAllBaskets">
-       <ExternalLink class="mr-2 h-4 w-4" />
-       Open All Baskets
-      </Button>
+      <div class="flex items-center gap-2">
+       <Button
+        variant="outline"
+        :disabled="!canOpenBarcodes"
+        @click="handleOpenBarcodes"
+       >
+        <Barcode class="mr-2 h-4 w-4" />
+        View Barcodes
+       </Button>
+       <Button @click="handleOpenAllBaskets">
+        <ExternalLink class="mr-2 h-4 w-4" />
+        Open All Baskets
+       </Button>
+      </div>
      </div>
     </div>
 
@@ -408,4 +491,11 @@ function handleOpenAllBaskets() {
    </SheetFooter>
   </SheetContent>
  </Sheet>
+
+ <OrderBarcodeSheet
+  v-model:open="barcodeSheetOpen"
+  :order="barcodeOrder"
+  :is-loading="isLoadingBarcodeOrder"
+  :error="barcodeOrderError"
+ />
 </template>

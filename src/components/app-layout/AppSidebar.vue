@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { SidebarProps } from '@/components/ui/sidebar'
 
 import {
@@ -17,6 +17,7 @@ import NavFlat from '@/components/app-layout/NavFlat.vue'
 import NavUser from '@/components/app-layout/NavUser.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/auth/usePermissions'
+import { supabase } from '@/lib/supabaseClient'
 
 import {
  Sidebar,
@@ -37,6 +38,87 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 const authStore = useAuthStore()
 const { hasPermission, hasRole } = usePermissions()
 
+const companyName = ref<string | null>(null)
+const locationName = ref<string | null>(null)
+
+let contextRequestId = 0
+
+const loadTenantContext = async () => {
+ const role = authStore.userRole
+ const companyId = authStore.companyId
+ const locationId = authStore.locationId
+ const requestId = ++contextRequestId
+
+ if (role === 'master') {
+  companyName.value = null
+  locationName.value = null
+  return
+ }
+
+ if (role === 'manager' && locationId) {
+  const { data, error } = await supabase
+   .from('locations')
+   .select(
+    `
+      name,
+      location_number,
+      company:companies(name)
+     `,
+   )
+   .eq('id', locationId)
+   .single()
+
+  if (requestId !== contextRequestId) return
+
+  if (!error && data) {
+   const locationData = data as {
+    name: string
+    location_number: number | null
+    company: { name: string } | { name: string }[] | null
+   }
+
+   const linkedCompany = Array.isArray(locationData.company)
+    ? locationData.company[0]
+    : locationData.company
+
+   companyName.value = linkedCompany?.name ?? null
+   locationName.value =
+    locationData.location_number !== null
+     ? `#${locationData.location_number} - ${locationData.name}`
+     : locationData.name
+   return
+  }
+ }
+
+ if (companyId) {
+  const { data, error } = await supabase
+   .from('companies')
+   .select('name')
+   .eq('id', companyId)
+   .single()
+
+  if (requestId !== contextRequestId) return
+
+  companyName.value = !error && data?.name ? data.name : null
+ } else {
+  companyName.value = null
+ }
+
+ locationName.value = null
+}
+
+watch(
+ [
+  () => authStore.userRole,
+  () => authStore.companyId,
+  () => authStore.locationId,
+ ],
+ () => {
+  void loadTenantContext()
+ },
+ { immediate: true },
+)
+
 const companyLink = computed(() => {
  if (authStore.userRole === 'master') return '/app/companies'
  if (authStore.companyId) return `/app/companies/${authStore.companyId}`
@@ -50,6 +132,34 @@ const data = {
   avatar: '/avatars/shadcn.jpg',
  },
 }
+
+const contextTitle = computed(() => {
+ if (authStore.userRole === 'master') {
+  return 'Master Mode'
+ }
+
+ return companyName.value || 'Retail Ctrl'
+})
+
+const contextSubtitle = computed(() => {
+ if (authStore.userRole === 'manager') {
+  return locationName.value || 'Location not linked'
+ }
+
+ return null
+})
+
+const sidebarAriaLabel = computed(() => {
+ if (authStore.userRole === 'master') {
+  return 'Master mode context'
+ }
+
+ if (contextSubtitle.value) {
+  return `${contextTitle.value}, ${contextSubtitle.value}`
+ }
+
+ return contextTitle.value
+})
 
 const navItems = computed(() => {
  const items = [
@@ -96,18 +206,24 @@ const navItems = computed(() => {
      <SidebarMenuButton
       size="lg"
       class="pointer-events-none"
-      aria-label="Retail Ctrl"
+      :aria-label="sidebarAriaLabel"
      >
       <div
        class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
       >
        <Store class="size-4" />
       </div>
-      <span
-       class="truncate text-base font-semibold group-data-[collapsible=icon]:hidden"
+      <div
+       class="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden"
       >
-       Retail Ctrl
-      </span>
+       <span class="truncate text-base font-semibold">{{ contextTitle }}</span>
+       <span
+        v-if="contextSubtitle"
+        class="truncate text-xs text-muted-foreground"
+       >
+        {{ contextSubtitle }}
+       </span>
+      </div>
      </SidebarMenuButton>
     </SidebarMenuItem>
    </SidebarMenu>

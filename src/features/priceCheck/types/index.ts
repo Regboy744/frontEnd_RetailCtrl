@@ -500,6 +500,10 @@ export interface OrderSubmitResponseData {
  success: boolean
  results: SupplierOrderResult[]
  summary: OrderSubmitSummary
+ /** Persisted RetailCtrl order id (for post-submit label flows) */
+ order_id?: string
+ /** Number of order lines successfully persisted to order_items */
+ persisted_items_count?: number
 }
 
 export interface OrderSubmitResponse {

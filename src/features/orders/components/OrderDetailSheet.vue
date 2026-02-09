@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
  Sheet,
  SheetContent,
@@ -18,9 +18,10 @@ import {
  TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Download } from 'lucide-vue-next'
+import { Barcode, Download } from 'lucide-vue-next'
 import type { OrderDetail } from '@/features/orders/types'
 import { exportOrderDetailToCSV } from '@/features/orders/utils/exportOrders'
+import OrderBarcodeSheet from '@/features/orders/components/OrderBarcodeSheet.vue'
 
 interface Props {
  open: boolean
@@ -109,11 +110,30 @@ const totalSavings = computed(() => {
  )
 })
 
+const barcodeSheetOpen = ref(false)
+
+const hasBarcodeItems = computed(() => {
+ return (
+  props.order?.order_items?.some((item) => {
+   return Boolean(item.master_products?.article_code)
+  }) ?? false
+ )
+})
+
 const handleExport = () => {
  if (props.order) {
   exportOrderDetailToCSV(props.order)
  }
 }
+
+watch(
+ () => props.open,
+ (isOpen) => {
+  if (!isOpen) {
+   barcodeSheetOpen.value = false
+  }
+ },
+)
 </script>
 
 <template>
@@ -192,10 +212,21 @@ const handleExport = () => {
     <div>
      <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold">Order Items</h3>
-      <Button variant="outline" size="sm" @click="handleExport">
-       <Download class="h-4 w-4 mr-2" />
-       Export CSV
-      </Button>
+      <div class="flex items-center gap-2">
+       <Button
+        variant="outline"
+        size="sm"
+        :disabled="!hasBarcodeItems"
+        @click="barcodeSheetOpen = true"
+       >
+        <Barcode class="h-4 w-4 mr-2" />
+        View Barcodes
+       </Button>
+       <Button variant="outline" size="sm" @click="handleExport">
+        <Download class="h-4 w-4 mr-2" />
+        Export CSV
+       </Button>
+      </div>
      </div>
 
      <div class="border rounded-md">
@@ -300,4 +331,10 @@ const handleExport = () => {
    </div>
   </SheetContent>
  </Sheet>
+
+ <OrderBarcodeSheet
+  v-model:open="barcodeSheetOpen"
+  :order="order"
+  :is-loading="isLoading"
+ />
 </template>
