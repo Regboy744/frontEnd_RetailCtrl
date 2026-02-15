@@ -194,7 +194,10 @@ export const orderItemsForStatsQuery = (orderIds: string[]) => {
   return query.eq('id', '00000000-0000-0000-0000-000000000000')
  }
 
- return query.in('order_id', orderIds)
+ // TODO: .range(0, 4999) raises Supabase's default 1,000-row cap.
+ // When order_items approach 5,000 rows, implement a paginated
+ // fetchAll() utility that fetches in batches of 1,000.
+ return query.in('order_id', orderIds).range(0, 4999)
 }
 
 export type OrderItemsForStatsQueryType = QueryData<
@@ -203,31 +206,34 @@ export type OrderItemsForStatsQueryType = QueryData<
 
 export const orderSavingsCalculationsQuery = (
  companyId: string | null,
- orderItemIds: string[],
+ orderIds: string[],
 ) => {
  const query = supabase.from('savings_calculations').select(
   `
-     id,
-     company_id,
-     order_item_id,
-     baseline_price,
-     chosen_price,
-     best_external_price,
-     delta_vs_baseline,
-     is_saving,
-     savings_percentage
-    `,
+      id,
+      company_id,
+      order_item_id,
+      baseline_price,
+      chosen_price,
+      best_external_price,
+      delta_vs_baseline,
+      is_saving,
+      savings_percentage,
+      order_items!inner(order_id)
+     `,
  )
 
  if (companyId) {
   query.eq('company_id', companyId)
  }
 
- if (orderItemIds.length === 0) {
+ if (orderIds.length === 0) {
   return query.eq('id', '00000000-0000-0000-0000-000000000000')
  }
 
- return query.in('order_item_id', orderItemIds)
+ // Filter through the order_items FK relationship so only ~tens of
+ // order UUIDs hit the URL instead of thousands of item UUIDs.
+ return query.in('order_items.order_id', orderIds).range(0, 4999)
 }
 
 export type OrderSavingsCalculationsQueryType = QueryData<

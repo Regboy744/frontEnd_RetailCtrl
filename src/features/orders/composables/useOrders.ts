@@ -268,16 +268,15 @@ export const useOrders = () => {
 
    orders.value = ordersWithCounts
 
-   const orderItemIds = items.map((item) => item.id)
-   if (orderItemIds.length > 0) {
-    const {
-     data: savingsData,
-     error: savingsError,
-     status: savingsStatus,
-    } = await orderSavingsCalculationsQuery(
-     filters.value.companyId,
-     orderItemIds,
-    )
+    if (orderIds.length > 0) {
+     const {
+      data: savingsData,
+      error: savingsError,
+      status: savingsStatus,
+     } = await orderSavingsCalculationsQuery(
+      filters.value.companyId,
+      orderIds,
+     )
 
     if (savingsError) {
      errorStore.setError({ error: savingsError, customCode: savingsStatus })

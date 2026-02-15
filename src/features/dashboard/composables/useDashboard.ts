@@ -267,14 +267,13 @@ export const useDashboard = () => {
     return
    }
 
-   const orderItems = (itemsData ?? []) as DashboardOrderItemsType
-   const orderItemIds = orderItems.map((i) => i.id)
+    const orderItems = (itemsData ?? []) as DashboardOrderItemsType
 
-   const {
-    data: savingsData,
-    error: savingsError,
-    status: savingsStatus,
-   } = await dashboardSavingsCalculationsQuery(companyId, orderItemIds)
+    const {
+     data: savingsData,
+     error: savingsError,
+     status: savingsStatus,
+    } = await dashboardSavingsCalculationsQuery(companyId, orderIds)
 
    if (savingsError) {
     errorStore.setError({ error: savingsError, customCode: savingsStatus })
