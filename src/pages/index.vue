@@ -51,7 +51,7 @@
         class="bg-primary hover:bg-primary/90 text-primary-foreground"
         @click="handleGetStarted"
        >
-        Get Startedd
+        Get Starte
        </Button>
       </template>
      </div>
