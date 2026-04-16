@@ -11,13 +11,14 @@ CREATE TABLE supplier_company_prices (
     supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     master_product_id UUID NOT NULL REFERENCES master_products(id) ON DELETE CASCADE,
+    supplier_product_code TEXT NOT NULL,
     negotiated_price DECIMAL(12,4) NOT NULL CHECK (negotiated_price > 0),
     valid_from TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     valid_until TIMESTAMPTZ,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(supplier_id, company_id, master_product_id),
+    UNIQUE(supplier_id, company_id, master_product_id, supplier_product_code),
     CHECK (valid_until IS NULL OR valid_until > valid_from)
 );
 

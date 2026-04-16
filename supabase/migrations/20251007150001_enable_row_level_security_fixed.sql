@@ -309,6 +309,42 @@ CREATE POLICY "admin_delete_location_supplier_credentials"
     USING (is_admin() AND company_id = get_user_company_id());
 
 -- ============================================
+-- TABLE 16: SSRS_SCRAPE_RUNS
+-- ============================================
+ALTER TABLE ssrs_scrape_runs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "master_all_ssrs_scrape_runs" ON ssrs_scrape_runs
+    FOR ALL TO authenticated USING (is_master());
+
+CREATE POLICY "company_select_ssrs_scrape_runs" ON ssrs_scrape_runs
+    FOR SELECT TO authenticated
+    USING ((is_admin() OR is_manager()) AND company_id = get_user_company_id());
+
+-- ============================================
+-- TABLE 17: SSRS_STORE_PRODUCTS
+-- ============================================
+ALTER TABLE ssrs_store_products ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "master_all_ssrs_store_products" ON ssrs_store_products
+    FOR ALL TO authenticated USING (is_master());
+
+CREATE POLICY "company_select_ssrs_store_products" ON ssrs_store_products
+    FOR SELECT TO authenticated
+    USING ((is_admin() OR is_manager()) AND company_id = get_user_company_id());
+
+-- ============================================
+-- TABLE 18: SSRS_STORE_PRODUCT_ROWS
+-- ============================================
+ALTER TABLE ssrs_store_product_rows ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "master_all_ssrs_store_product_rows" ON ssrs_store_product_rows
+    FOR ALL TO authenticated USING (is_master());
+
+CREATE POLICY "company_select_ssrs_store_product_rows" ON ssrs_store_product_rows
+    FOR SELECT TO authenticated
+    USING ((is_admin() OR is_manager()) AND company_id = get_user_company_id());
+
+-- ============================================
 -- COMMENTS
 -- ============================================
 COMMENT ON FUNCTION is_master IS 'Returns true if authenticated user has master role';

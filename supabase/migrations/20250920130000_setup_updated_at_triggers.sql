@@ -48,6 +48,14 @@ CREATE TRIGGER trigger_location_supplier_credentials_updated_at
     BEFORE UPDATE ON location_supplier_credentials
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER trigger_ssrs_scrape_runs_updated_at
+    BEFORE UPDATE ON ssrs_scrape_runs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_ssrs_store_products_updated_at
+    BEFORE UPDATE ON ssrs_store_products
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 
 -- Test example:
 -- UPDATE companies SET name = 'Updated Name' WHERE id = 'some-uuid';

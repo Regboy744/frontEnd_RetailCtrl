@@ -40,8 +40,8 @@ CREATE INDEX idx_supplier_price_history_changed_by ON supplier_price_history(cha
 CREATE INDEX idx_price_history_date ON supplier_price_history(changed_at);
 
 -- Supplier Negotiated Prices indexes
-CREATE INDEX idx_supplier_negotiated_prices_lookup ON supplier_company_prices(company_id, supplier_id, master_product_id);
-CREATE INDEX idx_supplier_negotiated_prices_supplier_product ON supplier_company_prices(supplier_id, master_product_id);
+CREATE INDEX idx_supplier_negotiated_prices_lookup ON supplier_company_prices(company_id, supplier_id, master_product_id, supplier_product_code);
+CREATE INDEX idx_supplier_negotiated_prices_supplier_product ON supplier_company_prices(supplier_id, master_product_id, supplier_product_code);
 CREATE INDEX idx_supplier_negotiated_prices_company ON supplier_company_prices(company_id);
 CREATE INDEX idx_supplier_negotiated_prices_expiring ON supplier_company_prices(valid_until) WHERE valid_until IS NOT NULL;
 CREATE INDEX idx_supplier_negotiated_prices_temporal ON supplier_company_prices(valid_from, valid_until);
@@ -148,6 +148,26 @@ CREATE INDEX idx_location_supplier_credentials_failed
     WHERE last_login_status IN ('failed', 'expired');
 
 -- ============================================
+-- SSRS INDEXES
+-- ============================================
+
+-- ssrs_scrape_runs indexes
+CREATE INDEX idx_ssrs_scrape_runs_company ON ssrs_scrape_runs(company_id);
+
+-- ssrs_store_products indexes
+-- NOTE: idx_ssrs_store_products_company is NOT needed — the UNIQUE constraint
+-- on (company_id, store_number, ean_plu, root_article_code) already covers it
+CREATE INDEX idx_ssrs_store_products_run ON ssrs_store_products(run_id);
+CREATE INDEX idx_ssrs_store_products_location ON ssrs_store_products(location_id);
+CREATE INDEX idx_ssrs_store_products_store ON ssrs_store_products(store_number);
+CREATE INDEX idx_ssrs_store_products_ean ON ssrs_store_products(ean_plu);
+CREATE INDEX idx_ssrs_store_products_article ON ssrs_store_products(root_article_code);
+
+-- ssrs_store_product_rows indexes (raw/staging table)
+CREATE INDEX idx_ssrs_raw_rows_run ON ssrs_store_product_rows(run_id);
+CREATE INDEX idx_ssrs_raw_rows_company ON ssrs_store_product_rows(company_id);
+
+-- ============================================
 -- OPTIMIZATION NOTES
 -- ============================================
 -- All indexes are now consolidated in this single file.
@@ -162,6 +182,7 @@ CREATE INDEX idx_location_supplier_credentials_failed
 -- - Temporal price history queries
 -- - Config settings lookups
 -- - Credential management and scraper health monitoring
+-- - SSRS scrape run lookups and store product queries
 --
 -- Index Types:
 -- - UNIQUE: Enforce data integrity (supplier names)
