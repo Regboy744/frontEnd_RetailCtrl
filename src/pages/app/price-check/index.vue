@@ -132,10 +132,18 @@ const handleClearResults = () => {
     :total-count="totalProductsCount"
    />
 
-   <!-- Products Not Found (moved above table for visibility) -->
+   <!-- Products Not Found (missing from catalog) -->
    <ProductsNotFound
     v-if="summary.counts.products_not_found.length > 0"
     :article-codes="summary.counts.products_not_found"
+   />
+
+   <!-- Unpriced (in catalog but no supplier data) -->
+   <ProductsNotFound
+    v-if="(summary.counts.products_unpriced?.length ?? 0) > 0"
+    :article-codes="summary.counts.products_unpriced ?? []"
+    label="unpriced"
+    description="No supplier in your catalog has pricing data for these products"
    />
 
    <!-- Comparison Table -->

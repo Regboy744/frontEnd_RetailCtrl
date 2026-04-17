@@ -12,8 +12,8 @@ importers:
         specifier: ^3.12.1
         version: 3.12.1
       '@regboy744/retailctrl-contracts':
-        specifier: ^0.1.2
-        version: 0.1.2(zod@4.3.6)
+        specifier: ^0.1.3
+        version: 0.1.3(zod@4.3.6)
       '@supabase/supabase-js':
         specifier: ^2.103.3
         version: 2.103.3
@@ -699,8 +699,8 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@regboy744/retailctrl-contracts@0.1.2':
-    resolution: {integrity: sha512-Wff4LNNmPEMEcIulR1wysIdltq1XLzTfC6ay+qc3FfW1HdzZvHEWPq1Vbr6vvOv/WNc4KdlVkD8K4+Foi+UXwA==, tarball: https://npm.pkg.github.com/download/@regboy744/retailctrl-contracts/0.1.2/f50165ed7bc794ca630463d0794f08b31470fabb}
+  '@regboy744/retailctrl-contracts@0.1.3':
+    resolution: {integrity: sha512-k7DmfcMDw2XB/cwZjducyG0KG070CdPyVWI6OSQ4gFYMDbWa3PBUIOHVKz3rlm+jcqSISnJsg3ILUMoLbXvqKA==, tarball: https://npm.pkg.github.com/download/@regboy744/retailctrl-contracts/0.1.3/8d15bfc4b4c3bd03fd980c5df67a397f53958bc0}
     engines: {node: '>=20'}
     peerDependencies:
       zod: ^4.0.0
@@ -3828,7 +3828,7 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@regboy744/retailctrl-contracts@0.1.2(zod@4.3.6)':
+  '@regboy744/retailctrl-contracts@0.1.3(zod@4.3.6)':
     dependencies:
       zod: 4.3.6
 

@@ -105,7 +105,7 @@ const getThresholdPercentage = (supplierId: string): number | null => {
   </div>
 
   <!-- Stats Row - Beautiful responsive cards -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
    <!-- Order Value -->
    <StatCard
     :icon="Receipt"
@@ -125,11 +125,20 @@ const getThresholdPercentage = (supplierId: string): number | null => {
     icon-color="text-success"
    />
 
-   <!-- Not Found -->
+   <!-- Not Found (article code missing from master catalog) -->
    <StatCard
     :icon="PackageX"
     label="Not Found"
     :value="summary.counts.products_not_found.length"
+    icon-bg="bg-warning/10"
+    icon-color="text-warning"
+   />
+
+   <!-- Unpriced (in catalog, but no supplier sells it) -->
+   <StatCard
+    :icon="PackageX"
+    label="Unpriced"
+    :value="summary.counts.products_unpriced?.length ?? 0"
     icon-bg="bg-warning/10"
     icon-color="text-warning"
    />

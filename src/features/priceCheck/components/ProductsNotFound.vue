@@ -10,9 +10,16 @@ import { AlertTriangle, ChevronDown } from 'lucide-vue-next'
 
 interface Props {
  articleCodes: string[]
+ /** Heading shown in the collapsed header. */
+ label?: string
+ /** Explanatory sub-text under the heading. */
+ description?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+ label: 'not found',
+ description: 'These article codes are missing from the catalog',
+})
 
 const isExpanded = ref(false)
 
@@ -43,10 +50,10 @@ const remainingCount = computed(() => props.articleCodes.length - 8)
         {{ articleCodes.length }} product{{
          articleCodes.length !== 1 ? 's' : ''
         }}
-        not found
+        {{ label }}
        </p>
        <p class="text-xs text-muted-foreground">
-        These article codes are missing from the catalog
+        {{ description }}
        </p>
       </div>
      </div>
