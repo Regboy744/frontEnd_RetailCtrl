@@ -2,7 +2,7 @@
  * Price-check frontend types.
  *
  * Shared exchange shapes (everything that crosses the HTTP boundary) live
- * in `@regboy/retailctrl-contracts` and are re-exported here. Types unique
+ * in `@regboy744/retailctrl-contracts` and are re-exported here. Types unique
  * to the frontend — UI selection state, order-submission payloads, grouped
  * views — stay local.
  *
@@ -27,7 +27,7 @@ import type {
  SupplierPrice,
  SupplierRanking,
  UploadAndCompareResponse,
-} from '@regboy/retailctrl-contracts/priceCheck'
+} from '@regboy744/retailctrl-contracts/priceCheck'
 
 // Shared re-exports — canonical shape lives in contracts.
 export type {

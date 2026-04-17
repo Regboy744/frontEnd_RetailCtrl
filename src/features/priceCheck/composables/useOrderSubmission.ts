@@ -5,7 +5,7 @@
  * Uses singleton pattern - state is shared across all component instances
  */
 
-import type { SupplierConstraint } from '@regboy/retailctrl-contracts/priceCheck';
+import type { SupplierConstraint } from '@regboy744/retailctrl-contracts/priceCheck';
 import { computed, ref } from 'vue';
 import { submitOrder } from '../api/orderSubmission';
 import type {

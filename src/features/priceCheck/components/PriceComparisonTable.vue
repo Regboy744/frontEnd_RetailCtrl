@@ -209,6 +209,27 @@ watch(searchFilter, (search) => {
  }
 })
 
+// Auto-expand rows the backend flagged as ambiguous. When `requires_user_pick`
+// is true the comparison has no trusted auto-winner and the user must choose
+// the right supplier/variant — keeping the row collapsed would hide the
+// alternatives they need to see.
+watch(
+ groupedProducts,
+ (groups) => {
+  let changed = false
+  for (const group of groups) {
+   const primaryNeedsPick = group.primary.requires_user_pick === true
+   const variantNeedsPick = group.variants.some((v) => v.requires_user_pick === true)
+   if ((primaryNeedsPick || variantNeedsPick) && !expandedRows.value.has(group.ean_code)) {
+    expandedRows.value.add(group.ean_code)
+    changed = true
+   }
+  }
+  if (changed) expandedRows.value = new Set(expandedRows.value)
+ },
+ { immediate: true },
+)
+
 // Toggle row expansion
 const toggleExpanded = (eanCode: string) => {
  if (expandedRows.value.has(eanCode)) {

@@ -11,7 +11,7 @@
 import type {
  SupplierConstraint,
  ValidationWarning,
-} from '@regboy/retailctrl-contracts/priceCheck'
+} from '@regboy744/retailctrl-contracts/priceCheck'
 import type {
  ProductSelection,
  OrderSubmitRequest,

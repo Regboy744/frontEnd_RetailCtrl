@@ -856,9 +856,12 @@ export type Database = {
           internal_product_id: string | null
           last_updated: string | null
           master_product_id: string
+          pack_count: number | null
+          pack_unit_size: string | null
           scraped_from_company_id: string | null
           supplier_id: string
           supplier_product_code: string | null
+          unit_cost_incl_vat: number | null
           vat_rate: number | null
         }
         Insert: {
@@ -868,9 +871,12 @@ export type Database = {
           internal_product_id?: string | null
           last_updated?: string | null
           master_product_id: string
+          pack_count?: number | null
+          pack_unit_size?: string | null
           scraped_from_company_id?: string | null
           supplier_id: string
           supplier_product_code?: string | null
+          unit_cost_incl_vat?: number | null
           vat_rate?: number | null
         }
         Update: {
@@ -880,9 +886,12 @@ export type Database = {
           internal_product_id?: string | null
           last_updated?: string | null
           master_product_id?: string
+          pack_count?: number | null
+          pack_unit_size?: string | null
           scraped_from_company_id?: string | null
           supplier_id?: string
           supplier_product_code?: string | null
+          unit_cost_incl_vat?: number | null
           vat_rate?: number | null
         }
         Relationships: [
@@ -1055,11 +1064,14 @@ export type Database = {
           internal_product_id: string
           is_active: boolean
           is_special_price: boolean
+          pack_count: number
+          pack_unit_size: string
           product_id: string
           special_price_notes: string
           supplier_id: string
           supplier_name: string
           supplier_product_code: string
+          unit_cost_incl_vat: number
           unit_size: string
           valid_until: string
         }[]

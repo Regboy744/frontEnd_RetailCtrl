@@ -11,7 +11,7 @@ importers:
       '@internationalized/date':
         specifier: ^3.12.1
         version: 3.12.1
-      '@regboy/retailctrl-contracts':
+      '@regboy744/retailctrl-contracts':
         specifier: file:../retailctrl-contracts
         version: file:../retailctrl-contracts(zod@4.3.6)
       '@supabase/supabase-js':
@@ -699,7 +699,7 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@regboy/retailctrl-contracts@file:../retailctrl-contracts':
+  '@regboy744/retailctrl-contracts@file:../retailctrl-contracts':
     resolution: {directory: ../retailctrl-contracts, type: directory}
     engines: {node: '>=20'}
     peerDependencies:
@@ -3828,7 +3828,7 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@regboy/retailctrl-contracts@file:../retailctrl-contracts(zod@4.3.6)':
+  '@regboy744/retailctrl-contracts@file:../retailctrl-contracts(zod@4.3.6)':
     dependencies:
       zod: 4.3.6
 
