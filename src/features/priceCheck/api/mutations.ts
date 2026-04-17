@@ -99,15 +99,17 @@ export async function uploadOnly(file: File): Promise<{
 }
 
 /**
- * Compare prices for given items (without file upload)
+ * Compare prices for given items (no file upload).
  *
- * @param items - Array of items to compare
- * @param companyId - The company ID for price comparison
+ * @param items - Already-parsed order items
+ * @param companyId - Company ID for pricing lookup
+ * @param supplierIds - Optional filter. When omitted, all suppliers considered.
  * @returns Price comparison results
  */
 export async function comparePrices(
  items: unknown[],
  companyId: string,
+ supplierIds?: string[],
 ): Promise<{
  success: boolean
  data?: PriceCheckApiResponse['data']['comparison']
@@ -119,6 +121,7 @@ export async function comparePrices(
  }>('/price-check/compare', {
   items,
   company_id: companyId,
+  ...(supplierIds !== undefined ? { supplier_ids: supplierIds } : {}),
  })
 
  if (!response.success || !response.data) {

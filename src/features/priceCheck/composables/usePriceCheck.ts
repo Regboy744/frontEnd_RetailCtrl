@@ -1,212 +1,71 @@
 /**
  * Price Check Composable
  *
- * Manages state and actions for the price check feature
- * Uses singleton pattern - state is shared across all component instances
+ * Singleton state + actions for the price-check feature.
+ * All pricing logic (ranking, threshold, requires_user_pick) lives in the
+ * backend. This composable is presentation-only: it holds the last server
+ * response, tracks which suppliers the user hid, and re-POSTs /compare
+ * whenever that set changes. No local re-evaluation.
  */
 
 import { computed, ref } from 'vue'
-import { uploadAndCompare } from '../api/mutations'
+import { comparePrices, uploadAndCompare } from '../api/mutations'
 import type {
  ComparisonSummary,
  PriceCheckApiResponse,
- ProductComparison,
- ProductEvaluation,
  SupplierRanking,
 } from '../types'
 import { useOrderSubmission } from './useOrderSubmission'
 
-// Shared state (singleton pattern - defined outside the function)
+/**
+ * Minimal shape the backend `/compare` accepts. Mirrors the XLS parse output
+ * that the server sent back in the initial upload-and-compare response.
+ */
+interface ParsedOrderItem {
+ article_code: string
+ quantity: number
+ unit_cost: number
+}
+
+// Shared state (module-level singleton)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const selectedFile = ref<File | null>(null)
 const result = ref<PriceCheckApiResponse['data'] | null>(null)
-// Use Record instead of Set for proper Vue reactivity
+// Record (not Set) for Vue reactivity
 const hiddenSupplierIds = ref<Record<string, boolean>>({})
+// Kept so we can call /compare again on supplier toggle without re-uploading
+const lastItems = ref<ParsedOrderItem[] | null>(null)
+const lastCompanyId = ref<string>('')
 
 export function usePriceCheck() {
- // Get order submission state for selection count display
  const { selections } = useOrderSubmission()
 
- /**
-  * Toggle supplier visibility
-  */
- function toggleSupplier(id: string) {
-  if (hiddenSupplierIds.value[id]) {
-   delete hiddenSupplierIds.value[id]
-  } else {
-   hiddenSupplierIds.value[id] = true
-  }
-  // Trigger reactivity by reassigning
-  hiddenSupplierIds.value = { ...hiddenSupplierIds.value }
- }
-
- /**
-  * Check if supplier is hidden
-  */
- function isSupplierHidden(id: string): boolean {
-  return !!hiddenSupplierIds.value[id]
- }
-
- // Computed - Active Suppliers
- const activeSuppliers = computed(() => {
-  if (!result.value?.comparison) return []
-  return result.value.comparison.suppliers.filter(
-   (s) => !hiddenSupplierIds.value[s.id],
-  )
- })
-
- // Computed - All Suppliers (for the toggle menu)
  const allSuppliers = computed(() => result.value?.comparison?.suppliers ?? [])
+ const activeSuppliers = computed(() =>
+  allSuppliers.value.filter((s) => !hiddenSupplierIds.value[s.id]),
+ )
 
- // Computed - Processed Products (Recalculated based on active suppliers)
- const processedProducts = computed((): ProductComparison[] => {
-  if (!result.value?.comparison) return []
-  const products = result.value.comparison.products
-  const hidden = hiddenSupplierIds.value
+ // Products + evaluation come from backend as-is. No local recompute.
+ const products = computed(() => result.value?.comparison?.products ?? [])
 
-  // If no suppliers are hidden, return original products (fast path)
-  if (Object.keys(hidden).length === 0) return products
+ const hasResults = computed(() => result.value !== null)
+ const parseResult = computed(() => result.value?.parse_result ?? null)
+ const totalProductsCount = computed(() => products.value.length)
+ const selectedProductsCount = computed(() => selections.value.size)
 
-  // Get thresholds map from summary for recalculating evaluation
-  const thresholdsApplied = result.value.comparison.summary.thresholds_applied
-
-  return products.map((product): ProductComparison => {
-   const orderUnitCost = product.order.unit_cost
-
-   // Step 1: Filter supplier_prices to only include active suppliers
-   const filteredSupplierPrices: typeof product.supplier_prices = {}
-   for (const [supplierId, prices] of Object.entries(product.supplier_prices)) {
-    if (!hidden[supplierId]) {
-     filteredSupplierPrices[supplierId] = prices
-    }
-   }
-
-   // Step 2: Collect all active suppliers with their prices
-   const availableSuppliers: Array<{
-    supplierId: string
-    supplierName: string
-    unitPrice: number
-    lineTotal: number
-   }> = []
-
-   for (const [supplierId, prices] of Object.entries(filteredSupplierPrices)) {
-    if (!prices || prices.length === 0) continue
-
-    const price = prices[0]
-    if (!price) continue
-
-    const supplier = activeSuppliers.value.find((s) => s.id === supplierId)
-    availableSuppliers.push({
-     supplierId,
-     supplierName: supplier?.name ?? 'Unknown',
-     unitPrice: price.unit_price,
-     lineTotal: price.unit_price * product.order.quantity,
-    })
-   }
-
-   // If no active suppliers have this product - order wins by default
-   if (availableSuppliers.length === 0) {
-    const newEvaluation: ProductEvaluation = {
-     winning_supplier_id: null,
-     winning_supplier_name: null,
-     winning_price: orderUnitCost,
-     order_is_best: true,
-     best_price_source: 'order',
-     potential_savings: 0,
-     threshold_percentage: 0,
-     required_price_to_win: orderUnitCost,
-     supplier_price_difference_pct: 0,
-     threshold_met: false,
-    }
-
-    return {
-     ...product,
-     supplier_prices: filteredSupplierPrices,
-     evaluation: newEvaluation,
-    }
-   }
-
-   // Step 3: Find the absolute cheapest supplier (for informational purposes)
-   const cheapestSupplier = availableSuppliers.reduce((min, curr) =>
-    curr.unitPrice < min.unitPrice ? curr : min,
-   )
-
-   // Step 4: Find all suppliers that meet their threshold requirement
-   const qualifyingSuppliers = availableSuppliers.filter((supplier) => {
-    const thresholdPct = thresholdsApplied?.[supplier.supplierId] ?? 0
-    const thresholdMultiplier = 1 - thresholdPct / 100
-    const requiredPrice = orderUnitCost * thresholdMultiplier
-    // Supplier qualifies if their price is at or below the required price
-    return supplier.unitPrice <= requiredPrice
-   })
-
-   // Step 5: Among qualifying suppliers, find the cheapest
-   const winningSupplier =
-    qualifyingSuppliers.length > 0
-     ? qualifyingSuppliers.reduce((min, curr) =>
-        curr.unitPrice < min.unitPrice ? curr : min,
-       )
-     : null
-
-   // Determine if order wins (no supplier qualifies)
-   const orderIsBest = orderUnitCost > 0 && !winningSupplier
-
-   // Get threshold info for the relevant supplier (winner or cheapest if none qualify)
-   const relevantSupplier = winningSupplier ?? cheapestSupplier
-   const thresholdPct = thresholdsApplied?.[relevantSupplier.supplierId] ?? 0
-   const thresholdMultiplier = 1 - thresholdPct / 100
-   const requiredPrice = orderUnitCost * thresholdMultiplier
-
-   // Calculate actual difference percentage for cheapest supplier (informational)
-   const priceDiff = orderUnitCost - cheapestSupplier.unitPrice
-   const actualDiffPct =
-    orderUnitCost > 0 ? (priceDiff / orderUnitCost) * 100 : 0
-
-   // Calculate potential savings (informational - based on cheapest supplier)
-   const rawSavings =
-    (orderUnitCost - cheapestSupplier.unitPrice) * product.order.quantity
-
-   // Build new evaluation object
-   const newEvaluation: ProductEvaluation = {
-    winning_supplier_id: orderIsBest
-     ? null
-     : (winningSupplier?.supplierId ?? null),
-    winning_supplier_name: orderIsBest
-     ? null
-     : (winningSupplier?.supplierName ?? null),
-    winning_price: orderIsBest
-     ? orderUnitCost
-     : (winningSupplier?.unitPrice ?? orderUnitCost),
-    order_is_best: orderIsBest,
-    best_price_source: orderIsBest ? 'order' : 'supplier',
-    potential_savings: rawSavings > 0 ? rawSavings : 0,
-    threshold_percentage: thresholdPct,
-    required_price_to_win: requiredPrice,
-    supplier_price_difference_pct: actualDiffPct,
-    threshold_met: !!winningSupplier,
-   }
-
-   return {
-    ...product,
-    supplier_prices: filteredSupplierPrices,
-    evaluation: newEvaluation,
-   }
-  })
- })
-
- // Computed - Selection-Based Summary
- // This summary is calculated based on USER SELECTIONS, not threshold-based evaluation
- // Products selected from a supplier count toward that supplier
- // Products NOT selected count toward "Local Order" (baseline)
- const selectionBasedSummary = computed((): ComparisonSummary | null => {
+ /**
+  * Selection-based summary. Uses user selections (not threshold evaluation)
+  * to decide which supplier each product counts against. Unselected products
+  * fall into a "Local Order" baseline row.
+  */
+ const summary = computed((): ComparisonSummary | null => {
   if (!result.value?.comparison) return null
   const originalSummary = result.value.comparison.summary
-  const currentProducts = processedProducts.value
+  const currentProducts = products.value
   const currentSelections = selections.value
   const activeSup = activeSuppliers.value
 
-  // Initialize supplier stats map
   const supplierStats = new Map<
    string,
    {
@@ -216,8 +75,6 @@ export function usePriceCheck() {
     total_cost_if_all_from_here: number
    }
   >()
-
-  // Pre-initialize all active suppliers with zero values
   for (const supplier of activeSup) {
    supplierStats.set(supplier.id, {
     products_won: 0,
@@ -227,46 +84,35 @@ export function usePriceCheck() {
    })
   }
 
-  // Initialize Local Order stats
   let localOrderCount = 0
   let localOrderCost = 0
 
-  // Loop through all products
   for (const product of currentProducts) {
    const selection = currentSelections.get(product.product_id)
 
-   // Calculate total_cost_if_all_from_here for each supplier
    for (const supplier of activeSup) {
     const prices = product.supplier_prices[supplier.id]
     if (prices && prices.length > 0 && prices[0]) {
-     const lineCost = prices[0].unit_price * product.order.quantity
-     const stats = supplierStats.get(supplier.id)!
-     stats.total_cost_if_all_from_here += lineCost
+     const stats = supplierStats.get(supplier.id)
+     if (stats) stats.total_cost_if_all_from_here += prices[0].unit_price * product.order.quantity
     }
    }
 
    if (selection) {
-    // Product is selected from a supplier
-    const supplierId = selection.supplier_id
-    const existing = supplierStats.get(supplierId)
-
-    if (existing) {
-     existing.products_won++
-     existing.won_products_order_cost += product.order.line_cost
-     existing.won_products_supplier_cost +=
+    const stats = supplierStats.get(selection.supplier_id)
+    if (stats) {
+     stats.products_won++
+     stats.won_products_order_cost += product.order.line_cost
+     stats.won_products_supplier_cost +=
       selection.supplier_unit_price * selection.quantity
     }
    } else {
-    // Product NOT selected - goes to Local Order
     localOrderCount++
     localOrderCost += product.order.line_cost
    }
   }
 
-  // Build supplier rankings array
   const newSupplierRankings: SupplierRanking[] = []
-
-  // Add active suppliers
   for (const supplier of activeSup) {
    const stats = supplierStats.get(supplier.id)!
    const savingsOnWonProducts =
@@ -275,7 +121,6 @@ export function usePriceCheck() {
     stats.won_products_order_cost > 0
      ? (savingsOnWonProducts / stats.won_products_order_cost) * 100
      : 0
-
    newSupplierRankings.push({
     supplier_id: supplier.id,
     supplier_name: supplier.name,
@@ -287,9 +132,7 @@ export function usePriceCheck() {
     savings_percentage: savingsPercentage,
    })
   }
-
-  // Add Local Order entry
-  const localOrderRanking: SupplierRanking = {
+  newSupplierRankings.push({
    supplier_id: 'local_order',
    supplier_name: 'Local Order',
    products_won: localOrderCount,
@@ -298,16 +141,11 @@ export function usePriceCheck() {
    won_products_order_cost: localOrderCost,
    savings_on_won_products: 0,
    savings_percentage: 0,
-  }
+  })
 
-  newSupplierRankings.push(localOrderRanking)
-
-  // Calculate total savings from selections
   const totalSavings = newSupplierRankings
    .filter((s) => s.supplier_id !== 'local_order')
    .reduce((sum, s) => sum + s.savings_on_won_products, 0)
-
-  // Count products selected from suppliers
   const productsFromSuppliers = currentProducts.length - localOrderCount
 
   return {
@@ -316,58 +154,35 @@ export function usePriceCheck() {
    evaluation_results: {
     products_order_is_best: localOrderCount,
     products_supplier_is_best: productsFromSuppliers,
-    products_below_threshold: 0, // Not relevant for selection-based
+    products_below_threshold: 0,
     max_potential_savings: totalSavings,
-    recommendation: 'mixed', // Not used (banner removed)
-    best_overall: null, // Not used (banner removed)
+    recommendation: 'mixed',
+    best_overall: null,
    },
    supplier_rankings: newSupplierRankings,
    thresholds_applied: originalSummary.thresholds_applied,
   }
  })
 
- // Computed - Selected products count (for display purposes)
- const selectedProductsCount = computed(() => selections.value.size)
-
- // Computed - Total products count
- const totalProductsCount = computed(() => processedProducts.value.length)
-
- // Computed - Has Results
- const hasResults = computed(() => result.value !== null)
-
- const suppliers = activeSuppliers
-
- const products = processedProducts
-
- // Summary based on user selections
- // This directly uses selectionBasedSummary which already has reactive dependency on selections
- const summary = computed(() => {
-  return selectionBasedSummary.value
- })
-
- const parseResult = computed(() => result.value?.parse_result ?? null)
-
- /**
-  * Upload file and get price comparison
-  */
- async function checkPrices(file: File, locationId: string, companyId: string) {
+ /** Upload an XLS file and run the first comparison. */
+ async function checkPrices(file: File, _locationId: string, companyId: string) {
   isLoading.value = true
   error.value = null
   selectedFile.value = file
 
   try {
-   const response = await uploadAndCompare(file, locationId, companyId)
-
+   const response = await uploadAndCompare(file, _locationId, companyId)
    if (!response.success) {
     error.value = response.error || 'Failed to check prices'
     return false
    }
-
    result.value = response.data ?? null
+   lastItems.value =
+    (response.data?.parse_result.items as ParsedOrderItem[] | undefined) ?? null
+   lastCompanyId.value = companyId
    return true
   } catch (err) {
-   error.value =
-    err instanceof Error ? err.message : 'An unexpected error occurred'
+   error.value = err instanceof Error ? err.message : 'An unexpected error occurred'
    return false
   } finally {
    isLoading.value = false
@@ -375,18 +190,56 @@ export function usePriceCheck() {
  }
 
  /**
-  * Clear all results and reset state
+  * Re-run /compare with the current visible-supplier filter. The backend is
+  * the single source of ranking truth; this function just forwards user
+  * intent (hidden set) and replaces the comparison in state.
   */
+ async function recompareWithCurrentFilter() {
+  if (!lastItems.value || !lastCompanyId.value || !result.value) return
+  const visibleIds = allSuppliers.value
+   .filter((s) => !hiddenSupplierIds.value[s.id])
+   .map((s) => s.id)
+  // Send only the fields Zod expects on the backend
+  const payload = lastItems.value.map((i) => ({
+   article_code: i.article_code,
+   quantity: i.quantity,
+   unit_cost: i.unit_cost,
+  }))
+  isLoading.value = true
+  try {
+   const res = await comparePrices(payload, lastCompanyId.value, visibleIds)
+   if (!res.success || !res.data) {
+    error.value = res.error || 'Failed to update comparison'
+    return
+   }
+   result.value = { ...result.value, comparison: res.data }
+  } catch (err) {
+   error.value = err instanceof Error ? err.message : 'An unexpected error occurred'
+  } finally {
+   isLoading.value = false
+  }
+ }
+
+ async function toggleSupplier(id: string) {
+  if (hiddenSupplierIds.value[id]) delete hiddenSupplierIds.value[id]
+  else hiddenSupplierIds.value[id] = true
+  hiddenSupplierIds.value = { ...hiddenSupplierIds.value }
+  await recompareWithCurrentFilter()
+ }
+
+ function isSupplierHidden(id: string): boolean {
+  return !!hiddenSupplierIds.value[id]
+ }
+
  function clearResults() {
   result.value = null
   error.value = null
   selectedFile.value = null
-  hiddenSupplierIds.value = {} // Reset hidden suppliers
+  hiddenSupplierIds.value = {}
+  lastItems.value = null
+  lastCompanyId.value = ''
  }
 
- /**
-  * Format currency value
-  */
  function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-IE', {
    style: 'currency',
@@ -394,20 +247,13 @@ export function usePriceCheck() {
   }).format(value)
  }
 
- /**
-  * Format percentage value
-  */
  function formatPercentage(value: number): string {
   const sign = value > 0 ? '+' : ''
   return `${sign}${value.toFixed(2)}%`
  }
 
- /**
-  * Get supplier name by ID
-  */
  function getSupplierName(supplierId: string): string {
-  const supplier = suppliers.value.find((s) => s.id === supplierId)
-  return supplier?.name ?? 'Unknown'
+  return activeSuppliers.value.find((s) => s.id === supplierId)?.name ?? 'Unknown'
  }
 
  return {
@@ -416,28 +262,23 @@ export function usePriceCheck() {
   error,
   selectedFile,
   result,
-
   // Computed
   hasResults,
-  suppliers,
+  suppliers: activeSuppliers,
+  allSuppliers,
   products,
   summary,
   parseResult,
-
-  // Selection info (for informational banner)
   selectedProductsCount,
   totalProductsCount,
-
   // Actions
   checkPrices,
   clearResults,
   toggleSupplier,
-
   // Helpers
   formatCurrency,
   formatPercentage,
   getSupplierName,
   isSupplierHidden,
-  allSuppliers,
  }
 }
