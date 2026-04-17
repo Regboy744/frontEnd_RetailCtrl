@@ -29,7 +29,10 @@ RETURNS TABLE (
     valid_until TIMESTAMPTZ,
     availability_status TEXT,
     supplier_product_code TEXT,
-    internal_product_id TEXT
+    internal_product_id TEXT,
+    unit_cost_incl_vat NUMERIC,
+    pack_count INT,
+    pack_unit_size TEXT
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -49,7 +52,10 @@ BEGIN
         scp.valid_until,
         sp.availability_status,
         sp.supplier_product_code,
-        sp.internal_product_id
+        sp.internal_product_id,
+        sp.unit_cost_incl_vat,
+        sp.pack_count,
+        sp.pack_unit_size
     FROM master_products mp
     JOIN supplier_products sp ON sp.master_product_id = mp.id
     JOIN suppliers s ON s.id = sp.supplier_id
