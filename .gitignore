@@ -30,3 +30,6 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# GitHub Packages auth — contains PAT, never commit
+.npmrc
