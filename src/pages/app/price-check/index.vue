@@ -146,7 +146,6 @@ const handleClearResults = () => {
   <OrderSelectionBar />
   <OrderSubmissionDialog
    v-if="hasResults"
-   :suppliers="suppliers"
    :company-id="currentCompanyId"
    :location-id="currentLocationId"
   />

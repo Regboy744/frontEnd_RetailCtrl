@@ -1,16 +1,22 @@
 /**
  * Order Builder Utility
  *
- * Transforms product selections into API request format
- * Groups items by supplier for submission
+ * Transforms product selections into the submission payload. Validation
+ * is driven by `supplier_constraints` that the backend attaches to
+ * the /compare response — no hardcoded supplier names, no fragile string
+ * matching. When the backend declares a new rule, the frontend picks it
+ * up automatically.
  */
 
+import type {
+ SupplierConstraint,
+ ValidationWarning,
+} from '@regboy/retailctrl-contracts/priceCheck'
 import type {
  ProductSelection,
  OrderSubmitRequest,
  SupplierOrderRequest,
  OrderItemRequest,
- Supplier,
 } from '../types'
 
 /**
@@ -67,35 +73,42 @@ export function buildOrderPayload(
  */
 export interface ValidationResult {
  valid: boolean
- warnings: string[]
+ warnings: ValidationWarning[]
 }
 
 /**
- * Check if any selections are missing required data
- * Returns warnings for user display
+ * Evaluate the selections against the backend-declared supplier constraints.
+ * No name matching — `constraints[supplier_id].requires_internal_product_id`
+ * comes straight from the ordering handler's config via the /compare
+ * response, so adding a new rule is a backend-only change.
  */
 export function validateSelections(
  selections: ProductSelection[],
- suppliers: Supplier[],
+ constraints: Record<string, SupplierConstraint>,
 ): ValidationResult {
- const warnings: string[] = []
+ const warnings: ValidationWarning[] = []
 
- // Find Savage & Whitten supplier
- const swSupplier = suppliers.find(
-  (s) =>
-   s.name.toLowerCase().includes('savage') ||
-   s.name.toLowerCase().includes('whitten'),
- )
-
- if (swSupplier) {
-  const swSelections = selections.filter((s) => s.supplier_id === swSupplier.id)
-  const missingProductId = swSelections.filter((s) => !s.internal_product_id)
-
-  if (missingProductId.length > 0) {
-   warnings.push(
-    `${missingProductId.length} Savage & Whitten item(s) are missing internal product ID and may fail to submit.`,
-   )
-  }
+ // Group counts of "missing internal_product_id" selections per supplier.
+ const missingBySupplier = new Map<string, number>()
+ for (const selection of selections) {
+  if (selection.internal_product_id) continue
+  const constraint = constraints[selection.supplier_id]
+  if (!constraint?.requires_internal_product_id) continue
+  missingBySupplier.set(
+   selection.supplier_id,
+   (missingBySupplier.get(selection.supplier_id) ?? 0) + 1,
+  )
+ }
+ for (const [supplierId, count] of missingBySupplier) {
+  const supplierName =
+   selections.find((s) => s.supplier_id === supplierId)?.supplier_name ?? 'supplier'
+  warnings.push({
+   code: 'missing_internal_product_id',
+   severity: 'error',
+   message: `${count} ${supplierName} item(s) are missing internal product ID and may fail to submit.`,
+   supplier_id: supplierId,
+   item_count: count,
+  })
  }
 
  return {

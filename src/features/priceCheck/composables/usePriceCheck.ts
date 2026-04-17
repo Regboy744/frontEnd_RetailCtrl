@@ -46,6 +46,11 @@ export function usePriceCheck() {
   allSuppliers.value.filter((s) => !hiddenSupplierIds.value[s.id]),
  )
 
+ /** supplier_id → declared ordering constraints (from backend). */
+ const supplierConstraints = computed(
+  () => result.value?.comparison?.supplier_constraints ?? {},
+ )
+
  // Products + evaluation come from backend as-is. No local recompute.
  const products = computed(() => result.value?.comparison?.products ?? [])
 
@@ -266,6 +271,7 @@ export function usePriceCheck() {
   hasResults,
   suppliers: activeSuppliers,
   allSuppliers,
+  supplierConstraints,
   products,
   summary,
   parseResult,

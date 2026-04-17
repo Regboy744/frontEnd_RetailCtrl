@@ -42,7 +42,8 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { supabase } from '@/lib/supabaseClient'
 import { useOrderSubmission } from '../composables/useOrderSubmission'
-import type { LocationOption, Supplier } from '../types'
+import { usePriceCheck } from '../composables/usePriceCheck'
+import type { LocationOption } from '../types'
 import {
  calculateTotalSavings,
  calculateTotalOrderCost,
@@ -50,7 +51,6 @@ import {
 } from '../utils/orderBuilder'
 
 interface Props {
- suppliers: Supplier[]
  companyId: string
  locationId?: string
 }
@@ -86,8 +86,10 @@ const isLocationLocked = computed(() => {
  )
 })
 
-// Validation warnings
-const validationResult = computed(() => validate(props.suppliers))
+// Validation warnings — driven by backend-declared supplier_constraints,
+// not by hardcoded supplier names.
+const { supplierConstraints } = usePriceCheck()
+const validationResult = computed(() => validate(supplierConstraints.value))
 
 // Totals
 const totalOrderCost = computed(() =>
@@ -311,7 +313,7 @@ onMounted(() => {
        </div>
        <ul class="text-sm text-warning space-y-1">
         <li v-for="(warning, index) in validationResult.warnings" :key="index">
-         {{ warning }}
+         {{ warning.message }}
         </li>
        </ul>
       </div>

@@ -5,6 +5,7 @@
  * Uses singleton pattern - state is shared across all component instances
  */
 
+import type { SupplierConstraint } from '@regboy/retailctrl-contracts/priceCheck';
 import { computed, ref } from 'vue';
 import { submitOrder } from '../api/orderSubmission';
 import type {
@@ -153,13 +154,11 @@ export function useOrderSubmission() {
   // === VALIDATION ===
 
   /**
-   * Validate selections before submission
+   * Validate selections before submission. Constraints come from the
+   * backend /compare response (supplier_constraints) — no name matching.
    */
-  function validate(suppliers: Supplier[]): {
-    valid: boolean;
-    warnings: string[];
-  } {
-    return validateSelections(Array.from(selections.value.values()), suppliers);
+  function validate(constraints: Record<string, SupplierConstraint>) {
+    return validateSelections(Array.from(selections.value.values()), constraints);
   }
 
   // === SUBMISSION ===
