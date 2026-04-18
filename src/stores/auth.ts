@@ -2,6 +2,7 @@ import type { Session, User } from '@supabase/supabase-js'
 import type { Database } from '@/types/shared/database.types'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { apiClient } from '@/lib/apiClient'
 import { supabase } from '@/lib/supabaseClient'
 
 // Type for user profile from database
@@ -30,6 +31,8 @@ export const useAuthStore = defineStore('auth-store', () => {
  const user = ref<User | null>(null)
  const session = ref<Session | null>(null)
  const profile = ref<UserProfile | null>(null)
+ const permissions = ref<string[]>([])
+ const uiPermissions = ref<string[]>([])
  const isLoading = ref(false)
  const isInitialized = ref(false)
  const error = ref<string | null>(null)
@@ -168,23 +171,31 @@ export const useAuthStore = defineStore('auth-store', () => {
   return Math.max(0, remaining)
  }
 
- // Fetch user profile from database
- const fetchUserProfile = async (userId: string): Promise<void> => {
-  try {
-   const { data, error: fetchError } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', userId)
-    .single()
+ // Fetch identity + permissions from backend /me. Backend is the
+ // single source of truth — registry-computed permissions plus the
+ // full user_profiles row in one round-trip.
+ interface MeResponse {
+  email: string
+  profile: UserProfile
+  permissions: string[]
+  ui_permissions: string[]
+ }
 
-   if (fetchError) {
-    console.error('Error fetching user profile:', fetchError)
+ const fetchMe = async (): Promise<void> => {
+  try {
+   const response = await apiClient.get<MeResponse>('/me')
+   if (!response.success || !response.data) {
+    console.error('Error fetching /me:', response.error)
+    profile.value = null
+    permissions.value = []
+    uiPermissions.value = []
     return
    }
-
-   profile.value = data
+   profile.value = response.data.profile
+   permissions.value = response.data.permissions
+   uiPermissions.value = response.data.ui_permissions
   } catch (err) {
-   console.error('Error fetching user profile:', err)
+   console.error('Error fetching /me:', err)
   }
  }
 
@@ -225,8 +236,8 @@ export const useAuthStore = defineStore('auth-store', () => {
      return
     }
 
-    // Fetch user profile
-    await fetchUserProfile(data.session.user.id)
+    // Fetch identity + permissions from backend
+    await fetchMe()
 
     // Update last activity
     updateLastActivity()
@@ -289,9 +300,9 @@ export const useAuthStore = defineStore('auth-store', () => {
    session.value = data.session
    user.value = data.user
 
-   // Fetch user profile
+   // Fetch identity + permissions from backend
    if (data.user) {
-    await fetchUserProfile(data.user.id)
+    await fetchMe()
    }
 
    // Update last activity
@@ -337,6 +348,8 @@ export const useAuthStore = defineStore('auth-store', () => {
   user.value = null
   session.value = null
   profile.value = null
+  permissions.value = []
+  uiPermissions.value = []
   error.value = null
   failedAttempts.value = 0
   setBackoff(0)
@@ -466,7 +479,7 @@ export const useAuthStore = defineStore('auth-store', () => {
     session.value = newSession
     user.value = newSession?.user || null
     if (newSession?.user) {
-     await fetchUserProfile(newSession.user.id)
+     await fetchMe()
     }
     updateLastActivity()
     break
@@ -483,7 +496,7 @@ export const useAuthStore = defineStore('auth-store', () => {
    case 'USER_UPDATED':
     user.value = newSession?.user || null
     if (newSession?.user) {
-     await fetchUserProfile(newSession.user.id)
+     await fetchMe()
     }
     break
 
@@ -500,6 +513,8 @@ export const useAuthStore = defineStore('auth-store', () => {
   user,
   session,
   profile,
+  permissions,
+  uiPermissions,
   isLoading,
   isInitialized,
   error,
@@ -526,7 +541,7 @@ export const useAuthStore = defineStore('auth-store', () => {
   updateLastActivity,
   checkInactivityTimeout,
   handleAuthStateChange,
-  fetchUserProfile,
+  fetchMe,
   getBackoffDelay,
  }
 })

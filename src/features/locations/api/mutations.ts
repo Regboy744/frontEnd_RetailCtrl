@@ -1,58 +1,63 @@
-import { supabase } from '@/lib/supabaseClient'
-import type { LocationInsert, LocationUpdate } from '@/features/locations/types'
+import { apiClient } from '@/lib/apiClient'
+import type {
+ Location,
+ LocationInsert,
+ LocationUpdate,
+} from '@/features/locations/types'
+
+interface MutationResult<T = Location> {
+ success: boolean
+ data?: T
+ error?: Error
+}
+
+const toMutationResult = <T>(res: {
+ success: boolean
+ data?: T
+ error?: { message: string }
+}): MutationResult<T> => ({
+ success: res.success,
+ data: res.data,
+ error: res.error ? new Error(res.error.message) : undefined,
+})
 
 // CREATE location
-export const createLocation = async (location: LocationInsert) => {
- try {
-  const { data, error } = await supabase
-   .from('locations')
-   .insert({
-    company_id: location.company_id,
-    name: location.name,
-    location_number: location.location_number,
-    location_type: location.location_type,
-    is_active: location.is_active ?? true,
-   })
-   .select()
-   .single()
-
-  if (error) throw error
-  return { success: true, data }
- } catch (err) {
-  return { success: false, error: err }
- }
+export const createLocation = async (
+ location: LocationInsert,
+): Promise<MutationResult> => {
+ const res = await apiClient.post<Location>('/locations', {
+  company_id: location.company_id,
+  name: location.name,
+  location_number: location.location_number,
+  location_type: location.location_type,
+  is_active: location.is_active ?? true,
+ })
+ return toMutationResult(res)
 }
 
 // UPDATE location
-export const updateLocation = async (id: string, location: LocationUpdate) => {
- try {
-  const { data, error } = await supabase
-   .from('locations')
-   .update({
-    name: location.name,
-    location_number: location.location_number,
-    location_type: location.location_type,
-    is_active: location.is_active,
-   })
-   .eq('id', id)
-   .select()
-   .single()
-
-  if (error) throw error
-  return { success: true, data }
- } catch (err) {
-  return { success: false, error: err }
- }
+export const updateLocation = async (
+ id: string,
+ location: LocationUpdate,
+): Promise<MutationResult> => {
+ const res = await apiClient.patch<Location>(
+  `/locations/${encodeURIComponent(id)}`,
+  {
+   name: location.name,
+   location_number: location.location_number,
+   location_type: location.location_type,
+   is_active: location.is_active,
+  },
+ )
+ return toMutationResult(res)
 }
 
 // DELETE location
-export const deleteLocation = async (id: string) => {
- try {
-  const { error } = await supabase.from('locations').delete().eq('id', id)
-
-  if (error) throw error
-  return { success: true }
- } catch (err) {
-  return { success: false, error: err }
- }
+export const deleteLocation = async (
+ id: string,
+): Promise<MutationResult<null>> => {
+ const res = await apiClient.delete<null>(
+  `/locations/${encodeURIComponent(id)}`,
+ )
+ return toMutationResult(res)
 }

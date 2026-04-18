@@ -1,4 +1,10 @@
 import { computed } from 'vue'
+import {
+ hasPermission as registryHasPermission,
+ isUiVisible as registryIsUiVisible,
+ type Permission,
+ type Role,
+} from '@regboy744/retailctrl-contracts/permissions'
 import { useAuthStore, type UserRole } from '@/stores/auth'
 
 /**
@@ -7,181 +13,80 @@ import { useAuthStore, type UserRole } from '@/stores/auth'
  */
 const ROLE_HIERARCHY: UserRole[] = ['manager', 'admin', 'master']
 
-/**
- * Permission definitions
- * Each permission maps to an array of roles that have that permission
- */
-const PERMISSIONS: Record<string, readonly UserRole[]> = {
- // Company management
- 'companies:read': ['master'],
- 'companies:write': ['master'],
- 'companies:delete': ['master'],
-
- // User management
- 'users:read': ['master'],
- 'users:write': ['master'],
- 'users:delete': ['master'],
-
- // Location management
- 'locations:read': ['master', 'admin', 'manager'],
- 'locations:write': ['master', 'admin'],
- 'locations:delete': ['master', 'admin'],
-
- // Supplier management
- 'suppliers:read': ['master'],
- 'suppliers:write': ['master'],
- 'suppliers:delete': ['master'],
-
- // Product management
- 'products:read': ['master', 'admin', 'manager'],
- 'products:write': ['master'],
- 'products:delete': ['master'],
-
- // Order management
- 'orders:read': ['master', 'admin', 'manager'],
- 'orders:write': ['master', 'admin', 'manager'],
- 'orders:delete': ['master', 'admin'],
-
- // Price checking
- 'price-check:read': ['master', 'admin', 'manager'],
- 'price-check:write': ['master', 'admin', 'manager'],
-
- // Company settings
- 'company-settings:read': ['master', 'admin'],
- 'company-settings:write': ['master', 'admin'],
-
- // Location credentials
- 'location-credentials:read': ['master', 'admin', 'manager'],
- 'location-credentials:write': ['master', 'admin'],
-
- // Reports
- 'reports:read': ['master', 'admin', 'manager'],
- 'reports:export': ['master', 'admin'],
-
- // Admin features
- 'admin:access': ['master', 'admin'],
- 'admin:full': ['master'],
-} as const
-
-export type Permission = keyof typeof PERMISSIONS
+export type { Permission }
 
 /**
- * Composable for checking user permissions and roles
+ * Composable for checking user permissions and roles.
+ *
+ * All checks delegate to the shared permission registry
+ * (`@regboy744/retailctrl-contracts/permissions`) — the single source
+ * of truth mirrored by backend middleware and Supabase RLS.
+ *
+ * UI-visibility checks (`canSee`) consult the registry's
+ * `uiVisibleTo` override; logical checks (`can`, `hasPermission`)
+ * use the raw `roles` list. Server still enforces — client checks
+ * are defensive only.
  */
 export function usePermissions() {
  const authStore = useAuthStore()
 
- /**
-  * Get the current user's role
-  */
  const currentRole = computed<UserRole | null>(() => authStore.userRole)
 
- /**
-  * Check if user has a specific permission
-  */
  const hasPermission = (permission: Permission): boolean => {
+  const role = authStore.userRole as Role | null
+  if (!role) return false
+  return registryHasPermission(role, permission)
+ }
+
+ /**
+  * Should this permission's UI be rendered for the current role?
+  * Honors `uiVisibleTo` — e.g. `orders:send` is allowed for master
+  * on the server but hidden in the UI.
+  */
+ const canSee = (permission: Permission): boolean => {
+  const role = authStore.userRole as Role | null
+  if (!role) return false
+  return registryIsUiVisible(role, permission)
+ }
+
+ const hasRole = (role: UserRole): boolean => authStore.userRole === role
+
+ const hasAnyRole = (roles: UserRole[]): boolean => {
   const role = authStore.userRole
   if (!role) return false
-
-  const allowedRoles = PERMISSIONS[permission]
-  if (!allowedRoles) return false
-  return allowedRoles.includes(role)
+  return roles.includes(role)
  }
 
  /**
-  * Check if user has a specific role
-  */
- const hasRole = (role: UserRole): boolean => {
-  return authStore.userRole === role
- }
-
- /**
-  * Check if user has any of the specified roles
-  */
- const hasAnyRole = (roles: UserRole[]): boolean => {
-  const userRole = authStore.userRole
-  if (!userRole) return false
-  return roles.includes(userRole)
- }
-
- /**
-  * Check if user has all of the specified roles (edge case, usually not needed)
-  */
- const hasAllRoles = (roles: UserRole[]): boolean => {
-  const userRole = authStore.userRole
-  if (!userRole) return false
-  // Since a user can only have one role, this checks if the array contains only that role
-  return roles.length === 1 && roles[0] === userRole
- }
-
- /**
-  * Check if user's role is at least as privileged as the specified role
-  * Uses role hierarchy: manager < admin < master
+  * Check if user's role is at least as privileged as the specified role.
+  * Kept for legacy call sites; prefer explicit `can(permission)`.
   */
  const isAtLeastRole = (minRole: UserRole): boolean => {
-  const userRole = authStore.userRole
-  if (!userRole) return false
-
-  const userRoleIndex = ROLE_HIERARCHY.indexOf(userRole)
-  const minRoleIndex = ROLE_HIERARCHY.indexOf(minRole)
-
-  return userRoleIndex >= minRoleIndex
- }
-
- /**
-  * Check if user can perform an action on a resource
-  * Convenience method combining action + resource into permission key
-  */
- const can = (action: string, resource: string): boolean => {
-  const permission = `${resource}:${action}` as Permission
-  if (!(permission in PERMISSIONS)) {
-   console.warn(`Unknown permission: ${permission}`)
-   return false
-  }
-  return hasPermission(permission)
- }
-
- /**
-  * Check if user is a master (highest privilege)
-  */
- const isMaster = computed(() => hasRole('master'))
-
- /**
-  * Check if user is an admin or higher
-  */
- const isAdmin = computed(() => isAtLeastRole('admin'))
-
- /**
-  * Check if user is a manager or higher
-  */
- const isManager = computed(() => isAtLeastRole('manager'))
-
- /**
-  * Get all permissions for the current user
-  */
- const userPermissions = computed<Permission[]>(() => {
   const role = authStore.userRole
-  if (!role) return []
-
-  return (Object.keys(PERMISSIONS) as Permission[]).filter((permission) => {
-   const allowedRoles = PERMISSIONS[permission]
-   return allowedRoles?.includes(role) ?? false
-  })
- })
-
- /**
-  * Check multiple permissions at once (AND logic - all must be true)
-  */
- const hasAllPermissions = (permissions: Permission[]): boolean => {
-  return permissions.every((permission) => hasPermission(permission))
+  if (!role) return false
+  return ROLE_HIERARCHY.indexOf(role) >= ROLE_HIERARCHY.indexOf(minRole)
  }
 
  /**
-  * Check multiple permissions at once (OR logic - at least one must be true)
+  * Preferred API: `can('resource:action')` — registry-backed.
   */
- const hasAnyPermission = (permissions: Permission[]): boolean => {
-  return permissions.some((permission) => hasPermission(permission))
- }
+ const can = (permission: Permission): boolean => hasPermission(permission)
+
+ const isMaster = computed(() => hasRole('master'))
+ const isAdmin = computed(() => hasRole('admin'))
+ const isManager = computed(() => hasRole('manager'))
+
+ /** Full permission list for the current role, pulled from the auth store. */
+ const userPermissions = computed<string[]>(() => authStore.permissions)
+
+ /** UI-visible subset, pulled from the auth store. */
+ const uiPermissions = computed<string[]>(() => authStore.uiPermissions)
+
+ const hasAllPermissions = (permissions: Permission[]): boolean =>
+  permissions.every((permission) => hasPermission(permission))
+
+ const hasAnyPermission = (permissions: Permission[]): boolean =>
+  permissions.some((permission) => hasPermission(permission))
 
  return {
   // Getters
@@ -190,12 +95,13 @@ export function usePermissions() {
   isAdmin,
   isManager,
   userPermissions,
+  uiPermissions,
 
   // Methods
   hasPermission,
+  canSee,
   hasRole,
   hasAnyRole,
-  hasAllRoles,
   isAtLeastRole,
   can,
   hasAllPermissions,
@@ -203,7 +109,4 @@ export function usePermissions() {
  }
 }
 
-/**
- * Export permissions constant for use in route guards and other places
- */
-export { PERMISSIONS, ROLE_HIERARCHY }
+export { ROLE_HIERARCHY }

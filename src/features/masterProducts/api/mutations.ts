@@ -1,13 +1,30 @@
+import { apiClient } from '@/lib/apiClient'
 import { supabase } from '@/lib/supabaseClient'
 import type {
+ MasterProduct,
  MasterProductInsert,
  MasterProductUpdate,
  CsvRow,
  UpsertResult,
  UpsertOptions,
 } from '@/features/masterProducts/types'
-import type { Json } from '@/types/shared/database.types'
 import { chunk } from '../utils/array'
+
+interface MutationResult<T = MasterProduct> {
+ success: boolean
+ data?: T
+ error?: Error
+}
+
+const toMutationResult = <T>(res: {
+ success: boolean
+ data?: T
+ error?: { message: string }
+}): MutationResult<T> => ({
+ success: res.success,
+ data: res.data,
+ error: res.error ? new Error(res.error.message) : undefined,
+})
 
 // Batch configuration - adjust these for testing
 const BATCH_CONFIG = {
@@ -16,108 +33,51 @@ const BATCH_CONFIG = {
 } as const
 
 // Create a new master product
-export const createMasterProduct = async (product: MasterProductInsert) => {
- try {
-  const { data, error } = await supabase
-   .from('master_products')
-   .insert({
-    ...product,
-    ean_history: [],
-   })
-   .select()
-   .single()
-
-  if (error) throw error
-  return { success: true, data }
- } catch (err) {
-  console.error('Error creating master product:', err)
-  return { success: false, error: err }
- }
+export const createMasterProduct = async (
+ product: MasterProductInsert,
+): Promise<MutationResult> => {
+ const res = await apiClient.post<MasterProduct>('/master-products', product)
+ return toMutationResult(res)
 }
 
-// Update an existing master product
+// Update an existing master product (backend handles ean_history)
 export const updateMasterProduct = async (
  id: string,
  product: MasterProductUpdate,
-) => {
- try {
-  // First, get the current product to check if EAN changed
-  const { data: currentProduct, error: fetchError } = await supabase
-   .from('master_products')
-   .select('ean_code, ean_history')
-   .eq('id', id)
-   .single()
-
-  if (fetchError) throw fetchError
-
-  // Check if EAN code changed
-  let eanHistory = (currentProduct.ean_history as string[]) || []
-  if (
-   product.ean_code &&
-   product.ean_code !== currentProduct.ean_code &&
-   !eanHistory.includes(currentProduct.ean_code)
-  ) {
-   // Add old EAN to history
-   eanHistory = [...eanHistory, currentProduct.ean_code]
-  }
-
-  const { data, error } = await supabase
-   .from('master_products')
-   .update({
-    ...product,
-    ean_history: eanHistory as unknown as Json,
-   })
-   .eq('id', id)
-   .select()
-   .single()
-
-  if (error) throw error
-  return { success: true, data }
- } catch (err) {
-  console.error('Error updating master product:', err)
-  return { success: false, error: err }
- }
+): Promise<MutationResult> => {
+ const res = await apiClient.patch<MasterProduct>(
+  `/master-products/${encodeURIComponent(id)}`,
+  product,
+ )
+ return toMutationResult(res)
 }
 
 // Soft delete a master product (set is_active = false)
-export const deleteMasterProduct = async (id: string) => {
- try {
-  const { data, error } = await supabase
-   .from('master_products')
-   .update({ is_active: false })
-   .eq('id', id)
-   .select()
-   .single()
-
-  if (error) throw error
-  return { success: true, data }
- } catch (err) {
-  console.error('Error deleting master product:', err)
-  return { success: false, error: err }
- }
+export const deleteMasterProduct = async (
+ id: string,
+): Promise<MutationResult> => {
+ const res = await apiClient.patch<MasterProduct>(
+  `/master-products/${encodeURIComponent(id)}`,
+  { is_active: false },
+ )
+ return toMutationResult(res)
 }
 
 // Reactivate a master product
-export const reactivateMasterProduct = async (id: string) => {
- try {
-  const { data, error } = await supabase
-   .from('master_products')
-   .update({ is_active: true })
-   .eq('id', id)
-   .select()
-   .single()
-
-  if (error) throw error
-  return { success: true, data }
- } catch (err) {
-  console.error('Error reactivating master product:', err)
-  return { success: false, error: err }
- }
+export const reactivateMasterProduct = async (
+ id: string,
+): Promise<MutationResult> => {
+ const res = await apiClient.patch<MasterProduct>(
+  `/master-products/${encodeURIComponent(id)}`,
+  { is_active: true },
+ )
+ return toMutationResult(res)
 }
 
-// Bulk insert master products from CSV with batch processing
+// Bulk insert master products from CSV with batch processing.
+// TODO(Step 3d): port to backend with streamed progress (SSE). For now
+// stays direct-to-Supabase so the existing progress UI keeps working.
 // NOTE: Existing products (same brand_id + article_code) are SKIPPED, not updated
-// TODO: Remove ean_history column in future - no longer needed with skip-only logic
 export const upsertMasterProducts = async (
  brandId: string,
  products: CsvRow[],
@@ -209,7 +169,6 @@ export const upsertMasterProducts = async (
     skippedCount++
    } else {
     // New product - add to insert list
-    // TODO: Remove ean_history field when column is removed from database
     toInsert.push({
      brand_id: brandId,
      article_code: articleCode,

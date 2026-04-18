@@ -436,7 +436,6 @@ export type Database = {
           location_id: string
           notes: string | null
           order_date: string
-          status: string | null
           total_amount: number | null
           updated_at: string | null
         }
@@ -447,7 +446,6 @@ export type Database = {
           location_id: string
           notes?: string | null
           order_date: string
-          status?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
@@ -458,7 +456,6 @@ export type Database = {
           location_id?: string
           notes?: string | null
           order_date?: string
-          status?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
@@ -558,8 +555,9 @@ export type Database = {
           company_id: string
           completed_at: string | null
           created_at: string
+          current_rows_merged: number
           id: string
-          rows_upserted: number
+          raw_rows_inserted: number
           source_job_id: string
           started_at: string
           status: string
@@ -569,8 +567,9 @@ export type Database = {
           company_id: string
           completed_at?: string | null
           created_at?: string
+          current_rows_merged?: number
           id?: string
-          rows_upserted?: number
+          raw_rows_inserted?: number
           source_job_id: string
           started_at?: string
           status?: string
@@ -580,8 +579,9 @@ export type Database = {
           company_id?: string
           completed_at?: string | null
           created_at?: string
+          current_rows_merged?: number
           id?: string
-          rows_upserted?: number
+          raw_rows_inserted?: number
           source_job_id?: string
           started_at?: string
           status?: string
@@ -593,6 +593,142 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ssrs_store_product_rows: {
+        Row: {
+          article_linking: string | null
+          case_qty: string | null
+          commodity_code: string | null
+          commodity_name: string | null
+          company_id: string
+          cost_price: number | null
+          created_at: string
+          delisted: string | null
+          department_code: string | null
+          department_name: string | null
+          description: string
+          drs: string | null
+          ean_plu: string
+          family_code: string | null
+          family_name: string | null
+          id: string
+          location_id: string | null
+          lu: string | null
+          lv: string | null
+          margin_percent: string | null
+          must_stock: string | null
+          page_number: number
+          root_article_code: string
+          row_index: number
+          run_id: string
+          scraped_at: string
+          size: string | null
+          store_name: string
+          store_number: string
+          store_selling_price: number | null
+          subdepartment_code: string | null
+          subdepartment_name: string | null
+          supplier: string | null
+          sv_code: string | null
+          vat: string | null
+        }
+        Insert: {
+          article_linking?: string | null
+          case_qty?: string | null
+          commodity_code?: string | null
+          commodity_name?: string | null
+          company_id: string
+          cost_price?: number | null
+          created_at?: string
+          delisted?: string | null
+          department_code?: string | null
+          department_name?: string | null
+          description: string
+          drs?: string | null
+          ean_plu: string
+          family_code?: string | null
+          family_name?: string | null
+          id?: string
+          location_id?: string | null
+          lu?: string | null
+          lv?: string | null
+          margin_percent?: string | null
+          must_stock?: string | null
+          page_number: number
+          root_article_code: string
+          row_index: number
+          run_id: string
+          scraped_at?: string
+          size?: string | null
+          store_name: string
+          store_number: string
+          store_selling_price?: number | null
+          subdepartment_code?: string | null
+          subdepartment_name?: string | null
+          supplier?: string | null
+          sv_code?: string | null
+          vat?: string | null
+        }
+        Update: {
+          article_linking?: string | null
+          case_qty?: string | null
+          commodity_code?: string | null
+          commodity_name?: string | null
+          company_id?: string
+          cost_price?: number | null
+          created_at?: string
+          delisted?: string | null
+          department_code?: string | null
+          department_name?: string | null
+          description?: string
+          drs?: string | null
+          ean_plu?: string
+          family_code?: string | null
+          family_name?: string | null
+          id?: string
+          location_id?: string | null
+          lu?: string | null
+          lv?: string | null
+          margin_percent?: string | null
+          must_stock?: string | null
+          page_number?: number
+          root_article_code?: string
+          row_index?: number
+          run_id?: string
+          scraped_at?: string
+          size?: string | null
+          store_name?: string
+          store_number?: string
+          store_selling_price?: number | null
+          subdepartment_code?: string | null
+          subdepartment_name?: string | null
+          supplier?: string | null
+          sv_code?: string | null
+          vat?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ssrs_store_product_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ssrs_store_product_rows_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ssrs_store_product_rows_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ssrs_scrape_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -1186,6 +1322,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_manager: { Args: never; Returns: boolean }
       is_master: { Args: never; Returns: boolean }
+      merge_ssrs_run_to_current: { Args: { p_run_id: string }; Returns: number }
       update_location_credential: {
         Args: {
           p_credential_id: string

@@ -1,234 +1,217 @@
-import { supabase } from '@/lib/supabaseClient'
-import type { QueryData } from '@supabase/supabase-js'
+import { apiClient } from '@/lib/apiClient'
 import type { OrderFilters } from '@/features/orders/types'
+import type { Tables } from '@/types/shared/database.types'
 
-// Fetch all companies for dropdown
-export const companiesQuery = () =>
- supabase
-  .from('companies')
-  .select('id, name')
-  .eq('is_active', true)
-  .order('name', { ascending: true })
-
-export type CompaniesQueryType = QueryData<ReturnType<typeof companiesQuery>>
-
-// Fetch locations by company for dropdown
-export const locationsByCompanyQuery = (companyId: string) =>
- supabase
-  .from('locations')
-  .select('id, name, location_number')
-  .eq('company_id', companyId)
-  .eq('is_active', true)
-  .order('location_number', { ascending: true })
-
-export type LocationsByCompanyQueryType = QueryData<
- ReturnType<typeof locationsByCompanyQuery>
->
-
-// Fetch locations with company info (for location-first filters)
-export const locationsWithCompanyQuery = (companyId?: string | null) => {
- const query = supabase
-  .from('locations')
-  .select(
-   `
-    id,
-    name,
-    location_number,
-    company_id,
-    company:companies(id, name)
-   `,
-  )
-  .eq('is_active', true)
-  .order('name')
-
- if (companyId) {
-  query.eq('company_id', companyId)
- }
-
- return query
+interface QueryResult<T> {
+ data: T | null
+ error: Error | null
+ status: number
 }
 
-export type LocationsWithCompanyQueryType = QueryData<
- ReturnType<typeof locationsWithCompanyQuery>
+const toQueryResult = <T>(res: {
+ success: boolean
+ data?: T
+ error?: { message: string; status: number }
+}): QueryResult<T> => ({
+ data: res.success ? (res.data ?? null) : null,
+ error: res.success ? null : new Error(res.error?.message ?? 'Request failed'),
+ status: res.error?.status ?? (res.success ? 200 : 500),
+})
+
+// ───────────────────────────── companies + locations dropdowns
+
+type CompanySummary = Pick<Tables<'companies'>, 'id' | 'name'>
+
+export const companiesQuery = async () => {
+ const res = await apiClient.get<CompanySummary[]>('/companies?activeOnly=true')
+ return toQueryResult(res)
+}
+
+export type CompaniesQueryType = CompanySummary[]
+
+type LocationSummary = Pick<
+ Tables<'locations'>,
+ 'id' | 'name' | 'location_number'
 >
 
-export const locationByIdWithCompanyQuery = (locationId: string) =>
- supabase
-  .from('locations')
-  .select(
-   `
-    id,
-    name,
-    location_number,
-    company_id,
-    company:companies(id, name)
-   `,
-  )
-  .eq('id', locationId)
-  .single()
-
-// Fetch orders with location and user info (for list view)
-export const ordersQuery = (filters: OrderFilters) => {
- let query = supabase.from('orders').select(
-  `
-      id,
-      order_date,
-      total_amount,
-      notes,
-      created_at,
-      locations!inner (
-        id,
-        name,
-        location_number,
-        company_id
-      ),
-      user_profiles (
-        id,
-        first_name,
-        last_name
-      )
-    `,
+export const locationsByCompanyQuery = async (companyId: string) => {
+ const res = await apiClient.get<LocationSummary[]>(
+  `/locations?companyId=${encodeURIComponent(companyId)}&activeOnly=true`,
  )
-
- // Filter by location if specified
- if (filters.locationId) {
-  query = query.eq('location_id', filters.locationId)
- }
-
- // Filter by company if specified
- if (filters.companyId) {
-  query = query.eq('locations.company_id', filters.companyId)
- }
-
- // Filter by date range
- if (filters.dateFrom) {
-  query = query.gte('order_date', filters.dateFrom)
- }
-
- if (filters.dateTo) {
-  query = query.lte('order_date', filters.dateTo)
- }
-
- return query.order('order_date', { ascending: false })
+ return toQueryResult(res)
 }
 
-export type OrdersQueryType = QueryData<ReturnType<typeof ordersQuery>>
+export type LocationsByCompanyQueryType = LocationSummary[]
 
-// Fetch single order with all details (for detail view)
-export const orderDetailQuery = (orderId: string) =>
- supabase
-  .from('orders')
-  .select(
-   `
-      id,
-      order_date,
-      total_amount,
-      notes,
-      created_at,
-      locations (
-        id,
-        name,
-        location_number
-      ),
-      user_profiles (
-        id,
-        first_name,
-        last_name
-      ),
-      order_items (
-        id,
-        quantity,
-        unit_price,
-        total_price,
-        baseline_unit_price,
-        override_reason,
-        master_products (
-          id,
-          description,
-          article_code,
-          ean_code,
-          account,
-          unit_size
-        ),
-        supplier_products (
-          id,
-          suppliers (
-            id,
-            name
-          )
-        )
-      )
-    `,
-  )
-  .eq('id', orderId)
-  .single()
+type LocationWithCompany = Pick<
+ Tables<'locations'>,
+ 'id' | 'name' | 'location_number' | 'company_id'
+> & {
+ company: Pick<Tables<'companies'>, 'id' | 'name'> | null
+}
 
-export type OrderDetailQueryType = QueryData<
- ReturnType<typeof orderDetailQuery>
->
+export const locationsWithCompanyQuery = async (
+ companyId?: string | null,
+) => {
+ const params = new URLSearchParams()
+ params.set('withCompany', 'true')
+ params.set('activeOnly', 'true')
+ if (companyId) params.set('companyId', companyId)
 
-// Fetch order items count for each order (for table display)
-export const orderItemsCountQuery = (orderIds: string[]) => {
+ const res = await apiClient.get<LocationWithCompany[]>(
+  `/locations?${params.toString()}`,
+ )
+ return toQueryResult(res)
+}
+
+export type LocationsWithCompanyQueryType = LocationWithCompany[]
+
+export const locationByIdWithCompanyQuery = async (locationId: string) => {
+ const res = await apiClient.get<LocationWithCompany>(
+  `/locations/${encodeURIComponent(locationId)}`,
+ )
+ return toQueryResult(res)
+}
+
+// ───────────────────────────── orders
+
+type OrderListRow = Pick<
+ Tables<'orders'>,
+ 'id' | 'order_date' | 'total_amount' | 'notes' | 'created_at'
+> & {
+ locations: Pick<
+  Tables<'locations'>,
+  'id' | 'name' | 'location_number' | 'company_id'
+ > | null
+ user_profiles: Pick<
+  Tables<'user_profiles'>,
+  'id' | 'first_name' | 'last_name'
+ > | null
+}
+
+export const ordersQuery = async (filters: OrderFilters) => {
+ const params = new URLSearchParams()
+ if (filters.locationId) params.set('locationId', filters.locationId)
+ if (filters.companyId) params.set('companyId', filters.companyId)
+ if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
+ if (filters.dateTo) params.set('dateTo', filters.dateTo)
+
+ const qs = params.toString()
+ const res = await apiClient.get<OrderListRow[]>(
+  qs ? `/orders?${qs}` : '/orders',
+ )
+ return toQueryResult(res)
+}
+
+export type OrdersQueryType = OrderListRow[]
+
+type OrderDetailRow = Pick<
+ Tables<'orders'>,
+ 'id' | 'order_date' | 'total_amount' | 'notes' | 'created_at'
+> & {
+ locations: Pick<
+  Tables<'locations'>,
+  'id' | 'name' | 'location_number'
+ > | null
+ user_profiles: Pick<
+  Tables<'user_profiles'>,
+  'id' | 'first_name' | 'last_name'
+ > | null
+ order_items: Array<
+  Pick<
+   Tables<'order_items'>,
+   | 'id'
+   | 'quantity'
+   | 'unit_price'
+   | 'total_price'
+   | 'baseline_unit_price'
+   | 'override_reason'
+  > & {
+   master_products: Pick<
+    Tables<'master_products'>,
+    'id' | 'description' | 'article_code' | 'ean_code' | 'account' | 'unit_size'
+   > | null
+   supplier_products:
+    | (Pick<Tables<'supplier_products'>, 'id'> & {
+       suppliers: Pick<Tables<'suppliers'>, 'id' | 'name'> | null
+      })
+    | null
+  }
+ >
+}
+
+export const orderDetailQuery = async (orderId: string) => {
+ const res = await apiClient.get<OrderDetailRow>(
+  `/orders/${encodeURIComponent(orderId)}`,
+ )
+ return toQueryResult(res)
+}
+
+export type OrderDetailQueryType = OrderDetailRow
+
+// ───────────────────────────── stats / counts
+
+type OrderIdRef = Pick<Tables<'order_items'>, 'order_id'>
+
+export const orderItemsCountQuery = async (orderIds: string[]) => {
  if (orderIds.length === 0) {
-  return supabase.from('order_items').select('order_id').limit(0)
+  return toQueryResult({ success: true, data: [] as OrderIdRef[] })
  }
-
- return supabase.from('order_items').select('order_id').in('order_id', orderIds)
+ const res = await apiClient.get<OrderIdRef[]>(
+  `/orders/items-count?orderIds=${encodeURIComponent(orderIds.join(','))}`,
+ )
+ return toQueryResult(res)
 }
 
-export type OrderItemsCountQueryType = QueryData<
- ReturnType<typeof orderItemsCountQuery>
+export type OrderItemsCountQueryType = OrderIdRef[]
+
+type OrderItemStats = Pick<
+ Tables<'order_items'>,
+ 'id' | 'order_id' | 'quantity'
 >
 
-export const orderItemsForStatsQuery = (orderIds: string[]) => {
- const query = supabase.from('order_items').select('id, order_id, quantity')
-
+export const orderItemsForStatsQuery = async (orderIds: string[]) => {
  if (orderIds.length === 0) {
-  return query.eq('id', '00000000-0000-0000-0000-000000000000')
+  return toQueryResult({ success: true, data: [] as OrderItemStats[] })
  }
-
- // TODO: .range(0, 4999) raises Supabase's default 1,000-row cap.
- // When order_items approach 5,000 rows, implement a paginated
- // fetchAll() utility that fetches in batches of 1,000.
- return query.in('order_id', orderIds).range(0, 4999)
+ const res = await apiClient.get<OrderItemStats[]>(
+  `/orders/items-for-stats?orderIds=${encodeURIComponent(orderIds.join(','))}`,
+ )
+ return toQueryResult(res)
 }
 
-export type OrderItemsForStatsQueryType = QueryData<
- ReturnType<typeof orderItemsForStatsQuery>
->
+export type OrderItemsForStatsQueryType = OrderItemStats[]
 
-export const orderSavingsCalculationsQuery = (
+type SavingsRow = Pick<
+ Tables<'savings_calculations'>,
+ | 'id'
+ | 'company_id'
+ | 'order_item_id'
+ | 'baseline_price'
+ | 'chosen_price'
+ | 'best_external_price'
+ | 'delta_vs_baseline'
+ | 'is_saving'
+ | 'savings_percentage'
+> & {
+ order_items: Pick<Tables<'order_items'>, 'order_id'> | null
+}
+
+export const orderSavingsCalculationsQuery = async (
  companyId: string | null,
  orderIds: string[],
 ) => {
- const query = supabase.from('savings_calculations').select(
-  `
-      id,
-      company_id,
-      order_item_id,
-      baseline_price,
-      chosen_price,
-      best_external_price,
-      delta_vs_baseline,
-      is_saving,
-      savings_percentage,
-      order_items!inner(order_id)
-     `,
- )
-
- if (companyId) {
-  query.eq('company_id', companyId)
- }
-
  if (orderIds.length === 0) {
-  return query.eq('id', '00000000-0000-0000-0000-000000000000')
+  return toQueryResult({ success: true, data: [] as SavingsRow[] })
  }
+ const params = new URLSearchParams()
+ params.set('orderIds', orderIds.join(','))
+ if (companyId) params.set('companyId', companyId)
 
- // Filter through the order_items FK relationship so only ~tens of
- // order UUIDs hit the URL instead of thousands of item UUIDs.
- return query.in('order_items.order_id', orderIds).range(0, 4999)
+ const res = await apiClient.get<SavingsRow[]>(
+  `/orders/savings?${params.toString()}`,
+ )
+ return toQueryResult(res)
 }
 
-export type OrderSavingsCalculationsQueryType = QueryData<
- ReturnType<typeof orderSavingsCalculationsQuery>
->
+export type OrderSavingsCalculationsQueryType = SavingsRow[]

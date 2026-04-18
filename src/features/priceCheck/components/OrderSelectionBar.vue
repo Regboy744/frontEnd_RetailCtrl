@@ -2,7 +2,10 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, X, Sparkles } from 'lucide-vue-next'
+import { usePermissions } from '@/composables/auth/usePermissions'
 import { useOrderSubmission } from '../composables/useOrderSubmission'
+
+const { canSee } = usePermissions()
 
 const {
  hasSelections,
@@ -69,7 +72,11 @@ const formatCurrency = (amount: number): string => {
        <X class="mr-1.5 h-4 w-4" />
        Clear
       </Button>
-      <Button size="sm" @click="openSubmitDialog">
+      <Button
+       v-if="canSee('orders:send')"
+       size="sm"
+       @click="openSubmitDialog"
+      >
        <ShoppingCart class="mr-1.5 h-4 w-4" />
        Review Order
       </Button>

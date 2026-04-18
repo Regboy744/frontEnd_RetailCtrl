@@ -76,10 +76,10 @@ onMounted(async () => {
    status.value = 'success'
    message.value = 'Authentication successful! Redirecting...'
 
-   // Fetch user profile
+   // Fetch identity + permissions from backend
    const { data: session } = await supabase.auth.getSession()
    if (session.session?.user) {
-    await authStore.fetchUserProfile(session.session.user.id)
+    await authStore.fetchMe()
    }
 
    setTimeout(() => {

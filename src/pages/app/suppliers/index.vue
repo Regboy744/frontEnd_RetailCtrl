@@ -5,18 +5,21 @@ definePage({
  },
 })
 
-import { supabase } from '@/lib/supabaseClient'
+import { apiClient } from '@/lib/apiClient'
 import { ref } from 'vue'
 import type { Tables } from '@/types/shared/database.types'
 
 const suppliers = ref<Tables<'suppliers'>[] | null>(null)
 
 ;(async () => {
- const { data, error } = await supabase.from('suppliers').select()
+ const res = await apiClient.get<Tables<'suppliers'>[]>('/suppliers')
 
- if (error) console.log(error)
+ if (!res.success) {
+  console.log(res.error)
+  return
+ }
 
- suppliers.value = data
+ suppliers.value = res.data ?? []
 })()
 </script>
 
