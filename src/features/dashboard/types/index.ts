@@ -48,6 +48,7 @@ export type CredentialLoginStatus =
 export interface CredentialIssueRow {
  id: string
  supplierName: string
+ companyName: string
  locationName: string
  locationNumber: number | null
  status: CredentialLoginStatus

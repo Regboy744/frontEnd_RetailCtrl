@@ -24,7 +24,10 @@ import {
  Pencil,
  Trash2,
  Plus,
+ PlugZap,
+ Loader2,
 } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 import { useLocationCredentials } from '@/features/locationCredentials/composables/useLocationCredentials'
 import type {
  SupplierWithCredential,
@@ -49,11 +52,13 @@ const {
  loadData,
  saveCredential,
  removeCredential,
+ checkCredential,
 } = useLocationCredentials(locationIdRef, companyIdRef)
 
 // Track which supplier is being edited
 const editingSupplier = ref<SupplierWithCredential | null>(null)
 const isFormOpen = ref(false)
+const testingId = ref<string | null>(null)
 
 // Load data on mount
 onMounted(async () => {
@@ -121,6 +126,24 @@ const handleSave = async (data: CredentialFormData) => {
 // Handle delete
 const handleDelete = async (credentialId: string) => {
  await removeCredential(credentialId)
+}
+
+// Handle test
+const handleTest = async (supplier: SupplierWithCredential) => {
+ if (!supplier.credential_id) return
+ testingId.value = supplier.credential_id
+ try {
+  const result = await checkCredential(supplier.credential_id)
+  if (result.ok) {
+   toast.success(`${supplier.supplier_name} login OK`)
+  } else {
+   toast.error(`${supplier.supplier_name} login failed`, {
+    description: result.error ?? 'Unknown error',
+   })
+  }
+ } finally {
+  testingId.value = null
+ }
 }
 
 // Handle cancel
@@ -219,6 +242,19 @@ const hasAnySuppliers = computed(
            />
            {{ getStatusConfig(supplier.last_login_status).label }}
           </Badge>
+          <Button
+           variant="ghost"
+           size="icon"
+           :disabled="testingId === supplier.credential_id"
+           :aria-label="`Test ${supplier.supplier_name} credentials`"
+           @click="handleTest(supplier)"
+          >
+           <Loader2
+            v-if="testingId === supplier.credential_id"
+            class="h-4 w-4 animate-spin"
+           />
+           <PlugZap v-else class="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" @click="handleEdit(supplier)">
            <Pencil class="h-4 w-4" />
           </Button>

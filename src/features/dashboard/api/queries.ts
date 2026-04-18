@@ -144,6 +144,7 @@ type CredentialHealthRow = Pick<
  Tables<'location_supplier_credentials'>,
  | 'id'
  | 'location_id'
+ | 'company_id'
  | 'supplier_id'
  | 'last_login_status'
  | 'last_login_at'
@@ -154,6 +155,7 @@ type CredentialHealthRow = Pick<
   Tables<'locations'>,
   'id' | 'name' | 'location_number'
  > | null
+ companies: Pick<Tables<'companies'>, 'id' | 'name'> | null
  suppliers: Pick<Tables<'suppliers'>, 'id' | 'name'> | null
 }
 

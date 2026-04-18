@@ -60,3 +60,17 @@ export const deleteCredential = async (credentialId: string) => {
  )
  return toMutationResult(res)
 }
+
+// TEST credential (backend runs supplier HTTP login and updates status)
+export interface CredentialTestResult {
+ ok: boolean
+ error?: string
+}
+
+export const testCredential = async (credentialId: string) => {
+ const res = await apiClient.post<CredentialTestResult>(
+  `/location-credentials/${encodeURIComponent(credentialId)}/test`,
+  {},
+ )
+ return toMutationResult<CredentialTestResult>(res)
+}

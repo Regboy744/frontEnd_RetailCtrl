@@ -10,6 +10,7 @@ import {
  createCredential,
  updateCredential,
  deleteCredential,
+ testCredential,
 } from '@/features/locationCredentials/api/mutations'
 import type {
  CredentialFormData,
@@ -146,6 +147,21 @@ export const useLocationCredentials = (
   }
  }
 
+ const checkCredential = async (credentialId: string) => {
+  const result = await testCredential(credentialId)
+  if (!result.success) {
+   errorStore.setError({
+    error: result.error as Error,
+    customCode: 500,
+   })
+   return { ok: false, error: result.error?.message }
+  }
+  // Refresh so badges reflect new last_login_status.
+  await fetchCredentials()
+  buildSuppliersWithCredentials()
+  return result.data ?? { ok: false, error: 'No response' }
+ }
+
  return {
   credentials,
   suppliers,
@@ -156,5 +172,6 @@ export const useLocationCredentials = (
   fetchSuppliers,
   saveCredential,
   removeCredential,
+  checkCredential,
  }
 }
