@@ -102,7 +102,12 @@ CREATE POLICY "company_select_locations" ON locations FOR SELECT TO authenticate
 CREATE POLICY "admin_insert_locations" ON locations FOR INSERT TO authenticated 
   WITH CHECK (is_admin() AND company_id = get_user_company_id());
 
-CREATE POLICY "admin_update_locations" ON locations FOR UPDATE TO authenticated 
+CREATE POLICY "admin_update_locations" ON locations FOR UPDATE TO authenticated
+  USING (is_admin() AND company_id = get_user_company_id());
+
+CREATE POLICY "master_delete_locations" ON locations FOR DELETE TO authenticated USING (is_master());
+
+CREATE POLICY "admin_delete_locations" ON locations FOR DELETE TO authenticated
   USING (is_admin() AND company_id = get_user_company_id());
 
 -- ============================================
@@ -120,8 +125,10 @@ CREATE POLICY "company_select_user_profiles" ON user_profiles FOR SELECT TO auth
 CREATE POLICY "admin_insert_user_profiles" ON user_profiles FOR INSERT TO authenticated 
   WITH CHECK (is_admin() AND company_id = get_user_company_id());
 
-CREATE POLICY "admin_update_user_profiles" ON user_profiles FOR UPDATE TO authenticated 
+CREATE POLICY "admin_update_user_profiles" ON user_profiles FOR UPDATE TO authenticated
   USING (is_admin() AND company_id = get_user_company_id());
+
+CREATE POLICY "master_delete_user_profiles" ON user_profiles FOR DELETE TO authenticated USING (is_master());
 
 -- ============================================
 -- TABLE 6: SUPPLIER_PRODUCTS
@@ -228,8 +235,10 @@ CREATE POLICY "master_insert_savings_calculations" ON savings_calculations FOR I
 CREATE POLICY "company_select_savings_calculations" ON savings_calculations FOR SELECT TO authenticated 
   USING ((is_admin() OR is_manager()) AND company_id = get_user_company_id());
 
-CREATE POLICY "company_insert_savings_calculations" ON savings_calculations FOR INSERT TO authenticated 
+CREATE POLICY "company_insert_savings_calculations" ON savings_calculations FOR INSERT TO authenticated
   WITH CHECK ((is_admin() OR is_manager()) AND company_id = get_user_company_id());
+
+CREATE POLICY "master_delete_savings_calculations" ON savings_calculations FOR DELETE TO authenticated USING (is_master());
 
 -- ============================================
 -- TABLE 13: SUPPLIER_PRICE_HISTORY (NEW)

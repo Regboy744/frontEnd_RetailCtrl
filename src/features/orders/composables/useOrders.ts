@@ -38,7 +38,6 @@ export const useOrders = () => {
   locationId: null,
   dateFrom: null,
   dateTo: null,
-  status: [],
   datePreset: undefined,
  })
 
@@ -370,7 +369,6 @@ export const useOrders = () => {
    locationId: filters.value.locationId,
    dateFrom: null,
    dateTo: null,
-   status: [],
    datePreset: undefined,
   }
   applyRoleDefaults()

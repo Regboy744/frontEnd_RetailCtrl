@@ -7,7 +7,6 @@ import {
  SheetHeader,
  SheetTitle,
 } from '@/components/ui/sheet'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
  Table,
@@ -62,38 +61,6 @@ const formatAccount = (account: string | null): string => {
   .split('_')
   .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
   .join(' ')
-}
-
-// Get status variant
-const getStatusVariant = (status: string | null) => {
- switch (status) {
-  case 'pending':
-   return 'secondary'
-  case 'confirmed':
-   return 'default'
-  case 'delivered':
-   return 'default'
-  case 'cancelled':
-   return 'destructive'
-  default:
-   return 'outline'
- }
-}
-
-// Get status color class
-const getStatusColor = (status: string | null) => {
- switch (status) {
-  case 'pending':
-   return 'bg-warning'
-  case 'confirmed':
-   return 'bg-primary'
-  case 'delivered':
-   return 'bg-success'
-  case 'cancelled':
-   return 'bg-destructive'
-  default:
-   return ''
- }
 }
 
 // Computed values
@@ -179,21 +146,12 @@ watch(
        </p>
       </div>
       <div>
-       <p class="text-sm text-muted-foreground">Status</p>
-       <Badge
-        :variant="getStatusVariant(order.status)"
-        :class="getStatusColor(order.status)"
-       >
-        {{ order.status || '-' }}
-       </Badge>
+       <p class="text-sm text-muted-foreground">Created By</p>
+       <p class="font-medium">{{ createdByName }}</p>
       </div>
      </div>
 
      <div class="grid grid-cols-2 gap-4">
-      <div>
-       <p class="text-sm text-muted-foreground">Created By</p>
-       <p class="font-medium">{{ createdByName }}</p>
-      </div>
       <div>
        <p class="text-sm text-muted-foreground">Created At</p>
        <p class="font-medium">{{ formatDate(order.created_at) }}</p>

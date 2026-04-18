@@ -36,7 +36,6 @@ export const exportOrderDetailToCSV = (order: OrderDetail) => {
   'Order Date': formatDate(order.order_date),
   Location: order.locations?.name || '-',
   'Location Number': order.locations?.location_number || '-',
-  Status: order.status || '-',
   'Created By': order.user_profiles
    ? `${order.user_profiles.first_name} ${order.user_profiles.last_name}`
    : '-',
@@ -53,13 +52,13 @@ export const exportOrderDetailToCSV = (order: OrderDetail) => {
   'Order Date': 'Article Code',
   Location: 'EAN Code',
   'Location Number': 'Description',
-  Status: 'Account',
-  'Created By': 'Unit Size',
-  Notes: 'Supplier',
-  'Total Amount': 'Quantity',
-  '': 'Unit Price',
-  ' ': 'Total Price',
-  '  ': 'Savings',
+  'Created By': 'Account',
+  Notes: 'Unit Size',
+  'Total Amount': 'Supplier',
+  '': 'Quantity',
+  ' ': 'Unit Price',
+  '  ': 'Total Price',
+  '   ': 'Savings',
  })
 
  // Add items
@@ -69,13 +68,13 @@ export const exportOrderDetailToCSV = (order: OrderDetail) => {
    'Order Date': item.master_products?.article_code || '-',
    Location: item.master_products?.ean_code || '-',
    'Location Number': item.master_products?.description || '-',
-   Status: formatAccount(item.master_products?.account || null),
-   'Created By': item.master_products?.unit_size || '-',
-   Notes: item.supplier_products?.suppliers?.name || '-',
-   'Total Amount': item.quantity,
-   '': formatCurrency(item.unit_price),
-   ' ': formatCurrency(item.total_price),
-   '  ': item.savings ? formatCurrency(item.savings) : '€0.00',
+   'Created By': formatAccount(item.master_products?.account || null),
+   Notes: item.master_products?.unit_size || '-',
+   'Total Amount': item.supplier_products?.suppliers?.name || '-',
+   '': item.quantity,
+   ' ': formatCurrency(item.unit_price),
+   '  ': formatCurrency(item.total_price),
+   '   ': item.savings ? formatCurrency(item.savings) : '€0.00',
   })
  })
 
@@ -99,7 +98,6 @@ export const exportOrdersToCSV = (orders: OrderWithLocation[]) => {
   'Order Date': formatDate(order.order_date),
   Location: order.locations?.name || '-',
   'Location Number': order.locations?.location_number || '-',
-  Status: order.status || '-',
   'Items Count': order.itemsCount || 0,
   'Total Amount': formatCurrency(order.total_amount),
   'Created By': order.user_profiles

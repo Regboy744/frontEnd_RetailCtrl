@@ -6,7 +6,6 @@ CREATE TABLE orders (
     created_by UUID NOT NULL REFERENCES user_profiles(id),
     order_date DATE NOT NULL,
     total_amount DECIMAL(15,4) CHECK (total_amount >= 0),
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'delivered', 'cancelled')),
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

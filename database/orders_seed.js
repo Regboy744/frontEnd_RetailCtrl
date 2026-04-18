@@ -42,13 +42,6 @@ const seedOrders = async (numOrders) => {
    precision: 0.01,
   })
 
-  const status = faker.helpers.weightedArrayElement([
-   { weight: 2, value: 'pending' },
-   { weight: 3, value: 'confirmed' },
-   { weight: 4, value: 'delivered' },
-   { weight: 1, value: 'cancelled' },
-  ])
-
   const notes = faker.datatype.boolean({ probability: 0.3 })
    ? faker.helpers.arrayElement([
       'Urgent delivery required',
@@ -66,7 +59,6 @@ const seedOrders = async (numOrders) => {
    created_by: createdBy.id,
    order_date: orderDate.toISOString().split('T')[0],
    total_amount: parseFloat(totalAmount.toFixed(2)),
-   status: status,
    notes: notes,
   })
  }
@@ -78,19 +70,9 @@ const seedOrders = async (numOrders) => {
   throw error
  }
 
- const statusCounts = orders.reduce((acc, order) => {
-  acc[order.status] = (acc[order.status] || 0) + 1
-  return acc
- }, {})
-
  const totalValue = orders.reduce((sum, order) => sum + order.total_amount, 0)
 
  console.log('Successfully inserted orders:', data?.length || orders.length)
- console.log(
-  `- Status breakdown: ${Object.entries(statusCounts)
-   .map(([status, count]) => `${status}=${count}`)
-   .join(', ')}`,
- )
  console.log(`- Total Order Value: €${totalValue.toFixed(2)}`)
  console.log(
   `- Average Order Value: €${(totalValue / Math.max(1, orders.length)).toFixed(

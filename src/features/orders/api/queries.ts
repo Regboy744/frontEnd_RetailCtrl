@@ -73,7 +73,6 @@ export const ordersQuery = (filters: OrderFilters) => {
   `
       id,
       order_date,
-      status,
       total_amount,
       notes,
       created_at,
@@ -110,11 +109,6 @@ export const ordersQuery = (filters: OrderFilters) => {
   query = query.lte('order_date', filters.dateTo)
  }
 
- // Filter by status
- if (filters.status && filters.status.length > 0) {
-  query = query.in('status', filters.status)
- }
-
  return query.order('order_date', { ascending: false })
 }
 
@@ -128,7 +122,6 @@ export const orderDetailQuery = (orderId: string) =>
    `
       id,
       order_date,
-      status,
       total_amount,
       notes,
       created_at,
