@@ -345,3 +345,23 @@ COMMENT ON FUNCTION is_admin IS 'Returns true if authenticated user has admin ro
 COMMENT ON FUNCTION is_manager IS 'Returns true if authenticated user has manager role';
 COMMENT ON FUNCTION get_user_company_id IS 'Returns company_id from JWT claims';
 COMMENT ON FUNCTION get_user_location_id IS 'Returns location_id from JWT claims';
+
+-- ============================================
+-- LOCK DOWN ANON ROLE
+-- ============================================
+-- All frontend CRUD now routes through the Express backend, which talks
+-- to Postgres as service_role (or under the user JWT as `authenticated`,
+-- still gated by the RLS policies above). The `anon` role must not be
+-- able to read or mutate any application table directly.
+--
+-- `authenticated` grants are retained on purpose: the backend issues
+-- user-scoped clients so RLS stays as the second line of defense behind
+-- the requirePermission middleware. A logged-in client that tries to
+-- bypass the backend hits the same RLS policies it would via the API.
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM anon;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon;
