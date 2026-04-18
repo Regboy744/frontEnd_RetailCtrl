@@ -214,7 +214,7 @@ const handleManageBilling = async () => {
       You have {{ daysLeftInTrial }} days left in your free trial
      </p>
      <p class="text-sm text-muted-foreground">
-      Subscribe now to continue using Retail Ctrl after your trial ends. First
+      Subscribe now to continue using Price Ctrl after your trial ends. First
       charge will be 7 days after subscribing.
      </p>
     </div>
@@ -503,7 +503,7 @@ const handleManageBilling = async () => {
      <div>
       <p class="font-medium text-foreground">10-Day Free Trial</p>
       <p>
-       Try Retail Ctrl free for 10 days with full Pro features. No credit card
+       Try Price Ctrl free for 10 days with full Pro features. No credit card
        required to start.
       </p>
      </div>

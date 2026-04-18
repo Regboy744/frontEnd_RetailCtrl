@@ -8,9 +8,9 @@
     <div class="flex items-center justify-between h-16">
      <div class="flex items-center space-x-2">
       <div class="p-2 bg-primary rounded-lg">
-       <Store class="w-5 h-5 text-primary-foreground" />
+       <Tag class="w-5 h-5 text-primary-foreground" />
       </div>
-      <span class="text-xl font-bold text-foreground">Retail CTRL</span>
+      <span class="text-xl font-bold text-foreground">Price Ctrl</span>
      </div>
      <div class="hidden md:flex items-center space-x-8">
       <a
@@ -70,79 +70,216 @@
 
     <!-- Floating shapes -->
     <div
-     class="absolute top-32 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl opacity-60 animate-float"
+     class="absolute top-32 -left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl opacity-60 animate-float"
     ></div>
     <div
-     class="absolute bottom-20 right-10 w-96 h-96 bg-chart-2/10 rounded-full blur-3xl opacity-50 animate-float-delayed"
+     class="absolute bottom-20 -right-20 w-96 h-96 bg-chart-2/10 rounded-full blur-3xl opacity-50 animate-float-delayed"
     ></div>
 
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-     <div class="max-w-4xl mx-auto text-center space-y-8">
-      <Badge
-       variant="outline"
-       class="border-primary/30 text-primary bg-primary/5"
-      >
-       <Sparkles class="w-3 h-3 mr-1" />
-       Technology + Expertise for Smarter Retail
-      </Badge>
-
-      <h1
-       class="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight"
-      >
-       Take Control of Your
-       <span
-        class="text-transparent bg-clip-text bg-linear-to-r from-primary to-chart-2"
-       >
-        Retail Operations
-       </span>
-      </h1>
-
-      <p
-       class="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
-      >
-       We help retail businesses reduce costs, automate processes, and gain
-       complete visibility through our powerful platform and expert consulting
-       services.
-      </p>
-
-      <div class="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-       <Button
-        size="lg"
-        class="bg-primary hover:bg-primary/90 text-primary-foreground group rounded-xl px-8"
-        @click="scrollToSection('services')"
-       >
-        Explore Platform
-        <ArrowRight
-         class="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform"
-        />
-       </Button>
-
-       <Button
-        size="lg"
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-20">
+     <div class="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <!-- Copy -->
+      <div class="lg:col-span-6 space-y-6 text-center lg:text-left">
+       <Badge
         variant="outline"
-        class="border-border text-foreground hover:bg-accent rounded-xl px-8"
-        @click="scrollToSection('cta')"
+        class="border-primary/30 text-primary bg-primary/5"
        >
-        <MessageCircle class="mr-2 w-4 h-4" />
-        Talk to an Expert
-       </Button>
+        <Sparkles class="w-3 h-3 mr-1" />
+        Technology + Expertise for Smarter Retail
+       </Badge>
+
+       <h1
+        class="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight tracking-tight"
+       >
+        Take control of your
+        <span
+         class="text-transparent bg-clip-text bg-linear-to-r from-primary to-chart-2"
+        >
+         retail operations
+        </span>
+       </h1>
+
+       <p
+        class="text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed"
+       >
+        Cut costs, automate paperwork, and see every store at a glance. One
+        platform + expert consulting, built for retail teams.
+       </p>
+
+       <div class="flex flex-col sm:flex-row gap-3 pt-2 justify-center lg:justify-start">
+        <Button
+         size="lg"
+         class="bg-primary hover:bg-primary/90 text-primary-foreground group rounded-xl px-8"
+         @click="scrollToSection('services')"
+        >
+         Explore Platform
+         <ArrowRight
+          class="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform"
+         />
+        </Button>
+
+        <Button
+         size="lg"
+         variant="outline"
+         class="border-border text-foreground hover:bg-accent rounded-xl px-8"
+         @click="scrollToSection('cta')"
+        >
+         <MessageCircle class="mr-2 w-4 h-4" />
+         Talk to an Expert
+        </Button>
+       </div>
+
+       <!-- Trust indicators -->
+       <div
+        class="pt-4 flex flex-wrap gap-x-6 gap-y-2 text-muted-foreground text-sm justify-center lg:justify-start"
+       >
+        <div class="flex items-center gap-2">
+         <CheckCircle2 class="w-4 h-4 text-success" />
+         <span>No setup fees</span>
+        </div>
+        <div class="flex items-center gap-2">
+         <CheckCircle2 class="w-4 h-4 text-success" />
+         <span>14-day free trial</span>
+        </div>
+        <div class="flex items-center gap-2">
+         <CheckCircle2 class="w-4 h-4 text-success" />
+         <span>Cancel anytime</span>
+        </div>
+       </div>
       </div>
 
-      <!-- Trust indicators -->
-      <div
-       class="pt-12 flex flex-wrap justify-center gap-8 text-muted-foreground text-sm"
-      >
-       <div class="flex items-center gap-2">
-        <CheckCircle2 class="w-5 h-5 text-success" />
-        <span>No setup fees</span>
-       </div>
-       <div class="flex items-center gap-2">
-        <CheckCircle2 class="w-5 h-5 text-success" />
-        <span>14-day free trial</span>
-       </div>
-       <div class="flex items-center gap-2">
-        <CheckCircle2 class="w-5 h-5 text-success" />
-        <span>Cancel anytime</span>
+      <!-- Dashboard preview sketch -->
+      <div class="lg:col-span-6 relative">
+       <!-- Glow behind preview -->
+       <div
+        class="absolute -inset-4 bg-linear-to-br from-primary/20 to-chart-2/20 rounded-3xl blur-2xl opacity-60"
+       ></div>
+
+       <div
+        class="relative rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+       >
+        <!-- Window chrome -->
+        <div
+         class="flex items-center gap-2 px-4 py-3 border-b border-border bg-secondary/50"
+        >
+         <div class="flex gap-1.5">
+          <div class="w-2.5 h-2.5 rounded-full bg-destructive/60"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-warning/60"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-success/60"></div>
+         </div>
+         <div
+          class="flex-1 text-center text-xs text-muted-foreground font-mono"
+         >
+          retailctrl.com/app/price-check
+         </div>
+        </div>
+
+        <!-- Preview body -->
+        <div class="p-5 space-y-4">
+         <!-- Header row -->
+         <div class="flex items-center justify-between">
+          <div class="space-y-1">
+           <div class="text-sm font-semibold text-foreground">
+            Price Check · Weekly Order
+           </div>
+           <div class="text-xs text-muted-foreground">
+            4 suppliers · 128 products
+           </div>
+          </div>
+          <Badge class="bg-success/10 text-success border-success/20">
+           Live
+          </Badge>
+         </div>
+
+         <!-- KPI tiles -->
+         <div class="grid grid-cols-3 gap-3">
+          <div class="rounded-lg border border-border bg-background p-3">
+           <div class="text-xs text-muted-foreground">Best price</div>
+           <div class="text-lg font-bold text-success">€2,184</div>
+           <div class="text-[10px] text-success flex items-center gap-1">
+            <ArrowDown class="w-3 h-3" /> 12% vs last week
+           </div>
+          </div>
+          <div class="rounded-lg border border-border bg-background p-3">
+           <div class="text-xs text-muted-foreground">Savings</div>
+           <div class="text-lg font-bold text-foreground">€316</div>
+           <div class="text-[10px] text-muted-foreground">vs worst split</div>
+          </div>
+          <div class="rounded-lg border border-border bg-background p-3">
+           <div class="text-xs text-muted-foreground">Out of stock</div>
+           <div class="text-lg font-bold text-foreground">7</div>
+           <div class="text-[10px] text-warning flex items-center gap-1">
+            <Minus class="w-3 h-3" /> needs review
+           </div>
+          </div>
+         </div>
+
+         <!-- Price comparison rows -->
+         <div class="rounded-lg border border-border overflow-hidden">
+          <div
+           class="grid grid-cols-12 gap-2 px-3 py-2 bg-secondary/60 text-[10px] uppercase tracking-wide text-muted-foreground font-medium"
+          >
+           <div class="col-span-5">Product</div>
+           <div class="col-span-2 text-right">Musgrave</div>
+           <div class="col-span-2 text-right">Barry</div>
+           <div class="col-span-2 text-right">O'Reillys</div>
+           <div class="col-span-1"></div>
+          </div>
+          <div
+           v-for="row in previewRows"
+           :key="row.name"
+           class="grid grid-cols-12 gap-2 px-3 py-2.5 text-xs border-t border-border items-center"
+          >
+           <div class="col-span-5 text-foreground truncate">{{ row.name }}</div>
+           <div
+            :class="[
+             'col-span-2 text-right font-mono tabular-nums',
+             row.best === 'musgrave'
+              ? 'text-success font-semibold'
+              : 'text-muted-foreground',
+            ]"
+           >
+            {{ row.musgrave }}
+           </div>
+           <div
+            :class="[
+             'col-span-2 text-right font-mono tabular-nums',
+             row.best === 'barry'
+              ? 'text-success font-semibold'
+              : 'text-muted-foreground',
+            ]"
+           >
+            {{ row.barry }}
+           </div>
+           <div
+            :class="[
+             'col-span-2 text-right font-mono tabular-nums',
+             row.best === 'oreillys'
+              ? 'text-success font-semibold'
+              : 'text-muted-foreground',
+            ]"
+           >
+            {{ row.oreillys }}
+           </div>
+           <div class="col-span-1 flex justify-end">
+            <ArrowUp v-if="row.trend === 'up'" class="w-3 h-3 text-destructive" />
+            <ArrowDown v-else-if="row.trend === 'down'" class="w-3 h-3 text-success" />
+            <Minus v-else class="w-3 h-3 text-muted-foreground" />
+           </div>
+          </div>
+         </div>
+
+         <!-- Footer CTA row -->
+         <div
+          class="flex items-center justify-between pt-2 text-xs text-muted-foreground"
+         >
+          <span class="flex items-center gap-1.5">
+           <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+           Updated 2 minutes ago
+          </span>
+          <span class="text-primary font-medium">Export order →</span>
+         </div>
+        </div>
        </div>
       </div>
      </div>
@@ -150,7 +287,7 @@
 
     <!-- Scroll indicator -->
     <div
-     class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce"
+     class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce hidden md:block"
     >
      <ChevronDown class="w-6 h-6 text-muted-foreground" />
     </div>
@@ -194,7 +331,7 @@
       >
        <Lightbulb class="w-6 h-6" />
        <span class="text-lg font-medium"
-        >Retail CTRL is your unified solution for operations excellence</span
+        >Price Ctrl is your unified solution for operations excellence</span
        >
       </div>
      </div>
@@ -337,7 +474,7 @@
        Real Results for Real Businesses
       </h2>
       <p class="text-lg text-muted-foreground">
-       See the impact Retail CTRL can have on your operations
+       See the impact Price Ctrl can have on your operations
       </p>
      </div>
 
@@ -405,18 +542,11 @@
       </Card>
      </div>
 
-     <!-- Client logos placeholder -->
+     <!-- Trust line -->
      <div class="text-center">
-      <p class="text-muted-foreground mb-6">Trusted by 50+ retail businesses</p>
-      <div class="flex flex-wrap justify-center gap-8">
-       <div
-        v-for="i in 5"
-        :key="i"
-        class="w-32 h-12 bg-secondary rounded-lg flex items-center justify-center text-muted-foreground text-sm"
-       >
-        Logo {{ i }}
-       </div>
-      </div>
+      <p class="text-muted-foreground text-sm">
+       Trusted by independent retailers, franchise groups, and multi-store operators across Ireland.
+      </p>
      </div>
     </div>
    </section>
@@ -445,7 +575,7 @@
        <Button
         size="lg"
         variant="outline"
-        class="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 rounded-xl px-8"
+        class="bg-transparent border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground hover:border-primary-foreground/60 rounded-xl px-8"
         @click="scrollToSection('services')"
        >
         Schedule a Demo
@@ -468,9 +598,9 @@
      <div class="space-y-4">
       <div class="flex items-center space-x-2">
        <div class="p-2 bg-primary rounded-lg">
-        <Store class="w-5 h-5 text-primary-foreground" />
+        <Tag class="w-5 h-5 text-primary-foreground" />
        </div>
-       <span class="text-xl font-bold text-background">Retail CTRL</span>
+       <span class="text-xl font-bold text-background">Price Ctrl</span>
       </div>
       <p class="text-muted-foreground text-sm">
        Technology + Expertise for Smarter Retail Operations
@@ -591,7 +721,7 @@
      class="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
     >
      <p class="text-muted-foreground text-sm">
-      &copy; {{ new Date().getFullYear() }} Retail CTRL. All rights reserved.
+      &copy; {{ new Date().getFullYear() }} Price Ctrl. All rights reserved.
      </p>
      <div class="flex gap-6">
       <a
@@ -619,7 +749,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
  ArrowRight,
- Store,
+ Tag,
  Sparkles,
  CheckCircle2,
  ChevronDown,
@@ -650,6 +780,9 @@ import {
  Mail,
  Phone,
  MapPin,
+ ArrowDown,
+ ArrowUp,
+ Minus,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
@@ -784,13 +917,49 @@ const benefits = [
  },
 ]
 
+// Preview table rows for the hero dashboard sketch
+const previewRows = [
+ {
+  name: 'Tayto Cheese & Onion 45g',
+  musgrave: '€0.89',
+  barry: '€0.92',
+  oreillys: '€0.84',
+  best: 'oreillys',
+  trend: 'down',
+ },
+ {
+  name: 'Coca-Cola 330ml x 24',
+  musgrave: '€14.20',
+  barry: '€14.50',
+  oreillys: '€14.95',
+  best: 'musgrave',
+  trend: 'up',
+ },
+ {
+  name: 'Barry\'s Tea 80pk',
+  musgrave: '€3.85',
+  barry: '€3.60',
+  oreillys: '€3.90',
+  best: 'barry',
+  trend: 'flat',
+ },
+ {
+  name: 'Kerrygold Butter 227g',
+  musgrave: '€2.75',
+  barry: '€2.80',
+  oreillys: '€2.68',
+  best: 'oreillys',
+  trend: 'down',
+ },
+]
+
 // Testimonials data
 const testimonials = [
  {
   name: 'Sarah Mitchell',
   role: 'Operations Manager, Fresh Foods Co.',
   quote:
-   'Retail CTRL transformed how we manage our stores. Invoice processing that took hours now takes minutes.',
+   'Price Ctrl transformed how we manage our stores. Invoice processing that took hours now takes minutes.',
  },
  {
   name: 'James Chen',

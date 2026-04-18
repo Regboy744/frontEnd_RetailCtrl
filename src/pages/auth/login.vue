@@ -12,7 +12,7 @@ import {
  Eye,
  EyeOff,
  Loader2,
- ShoppingCart,
+ Tag,
  Lock,
  Mail,
 } from 'lucide-vue-next'
@@ -165,7 +165,7 @@ onUnmounted(() => {
     <!-- Logo/Brand -->
     <div class="flex justify-center">
      <div class="p-3 bg-primary/10 rounded-xl border border-primary/20">
-      <ShoppingCart class="w-8 h-8 text-primary" />
+      <Tag class="w-8 h-8 text-primary" />
      </div>
     </div>
 
@@ -174,7 +174,7 @@ onUnmounted(() => {
       Welcome back
      </CardTitle>
      <p class="text-muted-foreground text-sm">
-      Sign in to your Retail Ctrl account
+      Sign in to your Price Ctrl account
      </p>
     </div>
    </CardHeader>

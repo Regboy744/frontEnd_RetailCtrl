@@ -138,7 +138,7 @@ const contextTitle = computed(() => {
   return 'Master Mode'
  }
 
- return companyName.value || 'Retail Ctrl'
+ return companyName.value || 'Price Ctrl'
 })
 
 const contextSubtitle = computed(() => {
