@@ -292,6 +292,8 @@ export const useDashboard = () => {
     .map((c) => {
      const supplierName =
       (c.suppliers as { name?: string } | null)?.name ?? 'Unknown supplier'
+     const companyName =
+      (c.companies as { name?: string } | null)?.name ?? 'Unknown company'
      const locationName =
       (c.locations as { name?: string } | null)?.name ?? 'Unknown location'
      const locationNumber =
@@ -301,6 +303,7 @@ export const useDashboard = () => {
      return {
       id: c.id,
       supplierName,
+      companyName,
       locationName,
       locationNumber,
       status: normalizeLoginStatus(c.last_login_status),
@@ -308,7 +311,7 @@ export const useDashboard = () => {
       lastErrorMessage: c.last_error_message,
      }
     })
-    .filter((c) => c.status !== 'success')
+    .filter((c) => c.status === 'failed' || c.status === 'expired')
 
    if (credentialRes.error) {
     errorStore.setError({

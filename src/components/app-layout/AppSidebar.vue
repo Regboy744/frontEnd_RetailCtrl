@@ -17,7 +17,7 @@ import NavFlat from '@/components/app-layout/NavFlat.vue'
 import NavUser from '@/components/app-layout/NavUser.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissions } from '@/composables/auth/usePermissions'
-import { supabase } from '@/lib/supabaseClient'
+import { apiClient } from '@/lib/apiClient'
 
 import {
  Sidebar,
@@ -56,32 +56,17 @@ const loadTenantContext = async () => {
  }
 
  if (role === 'manager' && locationId) {
-  const { data, error } = await supabase
-   .from('locations')
-   .select(
-    `
-      name,
-      location_number,
-      company:companies(name)
-     `,
-   )
-   .eq('id', locationId)
-   .single()
+  const res = await apiClient.get<{
+   name: string
+   location_number: number | null
+   company: { id: string; name: string } | null
+  }>(`/locations/${encodeURIComponent(locationId)}?withCompany=true`)
 
   if (requestId !== contextRequestId) return
 
-  if (!error && data) {
-   const locationData = data as {
-    name: string
-    location_number: number | null
-    company: { name: string } | { name: string }[] | null
-   }
-
-   const linkedCompany = Array.isArray(locationData.company)
-    ? locationData.company[0]
-    : locationData.company
-
-   companyName.value = linkedCompany?.name ?? null
+  if (res.success && res.data) {
+   const locationData = res.data
+   companyName.value = locationData.company?.name ?? null
    locationName.value =
     locationData.location_number !== null
      ? `#${locationData.location_number} - ${locationData.name}`
@@ -91,15 +76,13 @@ const loadTenantContext = async () => {
  }
 
  if (companyId) {
-  const { data, error } = await supabase
-   .from('companies')
-   .select('name')
-   .eq('id', companyId)
-   .single()
+  const res = await apiClient.get<{ name: string }>(
+   `/companies/${encodeURIComponent(companyId)}`,
+  )
 
   if (requestId !== contextRequestId) return
 
-  companyName.value = !error && data?.name ? data.name : null
+  companyName.value = res.success && res.data?.name ? res.data.name : null
  } else {
   companyName.value = null
  }
@@ -176,7 +159,7 @@ const navItems = computed(() => {
   })
  }
 
- if (hasPermission('suppliers:read')) {
+ if (hasPermission('suppliers:write')) {
   items.push({ title: 'Suppliers', to: '/app/suppliers', icon: Truck })
  }
 
@@ -188,7 +171,7 @@ const navItems = computed(() => {
   })
  }
 
- if (hasPermission('users:read')) {
+ if (hasPermission('user_profiles:read')) {
   items.push({ title: 'Users', to: '/app/users', icon: Users })
  }
 

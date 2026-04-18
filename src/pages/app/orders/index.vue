@@ -4,7 +4,6 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import type { DataTableConfig } from '@/types/shared/custom.types'
 import DataTable from '@/components/appDataTable/DataTable.vue'
 import Button from '@/components/ui/button/Button.vue'
-import { Badge } from '@/components/ui/badge'
 import { Download, Eye, SlidersHorizontal } from 'lucide-vue-next'
 import { useOrders } from '@/features/orders/composables/useOrders'
 import { useAuthStore } from '@/stores/auth'
@@ -66,22 +65,6 @@ const formatDate = (dateString: string | null): string => {
  })
 }
 
-// Get status badge variant and color
-const getStatusBadge = (status: string | null) => {
- switch (status) {
-  case 'pending':
-   return { variant: 'secondary' as const, class: 'bg-warning' }
-  case 'confirmed':
-   return { variant: 'default' as const, class: 'bg-primary' }
-  case 'delivered':
-   return { variant: 'default' as const, class: 'bg-success' }
-  case 'cancelled':
-   return { variant: 'destructive' as const, class: '' }
-  default:
-   return { variant: 'outline' as const, class: '' }
- }
-}
-
 // Handle view order detail
 const handleViewOrder = async (orderId: string) => {
  selectedOrderId.value = orderId
@@ -136,24 +119,6 @@ const columns: ColumnDef<OrderWithLocation>[] = [
    ])
   },
   enableSorting: false,
- },
- {
-  accessorKey: 'status',
-  header: 'Status',
-  cell: ({ row }) => {
-   const status = row.getValue('status') as string | null
-   const badgeProps = getStatusBadge(status)
-   return h(
-    'div',
-    { class: 'text-center' },
-    h(
-     Badge,
-     { variant: badgeProps.variant, class: badgeProps.class },
-     () => status || '-',
-    ),
-   )
-  },
-  enableSorting: true,
  },
  {
   accessorKey: 'itemsCount',

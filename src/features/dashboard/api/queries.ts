@@ -1,28 +1,44 @@
-import { supabase } from '@/lib/supabaseClient'
-import type { QueryData } from '@supabase/supabase-js'
+import { apiClient } from '@/lib/apiClient'
+import type { Tables } from '@/types/shared/database.types'
 
-export const dashboardCompaniesQuery = () =>
- supabase
-  .from('companies')
-  .select('id, name')
-  .eq('is_active', true)
-  .order('name', { ascending: true })
+interface QueryResult<T> {
+ data: T | null
+ error: Error | null
+ status: number
+}
 
-export type DashboardCompaniesType = QueryData<
- ReturnType<typeof dashboardCompaniesQuery>
+const toQueryResult = <T>(res: {
+ success: boolean
+ data?: T
+ error?: { message: string; status: number }
+}): QueryResult<T> => ({
+ data: res.success ? (res.data ?? null) : null,
+ error: res.success ? null : new Error(res.error?.message ?? 'Request failed'),
+ status: res.error?.status ?? (res.success ? 200 : 500),
+})
+
+type CompanySummary = Pick<Tables<'companies'>, 'id' | 'name'>
+
+export const dashboardCompaniesQuery = async () => {
+ const res = await apiClient.get<CompanySummary[]>('/companies?activeOnly=true')
+ return toQueryResult(res)
+}
+
+export type DashboardCompaniesType = CompanySummary[]
+
+type LocationSummary = Pick<
+ Tables<'locations'>,
+ 'id' | 'name' | 'location_number'
 >
 
-export const dashboardLocationsQuery = (companyId: string) =>
- supabase
-  .from('locations')
-  .select('id, name, location_number')
-  .eq('company_id', companyId)
-  .eq('is_active', true)
-  .order('location_number', { ascending: true })
+export const dashboardLocationsQuery = async (companyId: string) => {
+ const res = await apiClient.get<LocationSummary[]>(
+  `/locations?companyId=${encodeURIComponent(companyId)}&activeOnly=true`,
+ )
+ return toQueryResult(res)
+}
 
-export type DashboardLocationsType = QueryData<
- ReturnType<typeof dashboardLocationsQuery>
->
+export type DashboardLocationsType = LocationSummary[]
 
 export interface DashboardOrdersQueryParams {
  companyId: string
@@ -31,153 +47,130 @@ export interface DashboardOrdersQueryParams {
  dateTo?: string | null
 }
 
-export const dashboardOrdersQuery = (params: DashboardOrdersQueryParams) => {
- let query = supabase
-  .from('orders')
-  .select(
-   `
-    id,
-    order_date,
-    total_amount,
-    location_id,
-    locations!inner (
-      company_id
-    )
-   `,
-  )
-  .eq('locations.company_id', params.companyId)
-
- if (params.locationId) {
-  query = query.eq('location_id', params.locationId)
- }
-
- if (params.dateFrom) {
-  query = query.gte('order_date', params.dateFrom)
- }
-
- if (params.dateTo) {
-  query = query.lte('order_date', params.dateTo)
- }
-
- return query.order('order_date', { ascending: false })
+type DashboardOrderRow = Pick<
+ Tables<'orders'>,
+ 'id' | 'order_date' | 'total_amount' | 'location_id'
+> & {
+ locations: Pick<Tables<'locations'>, 'company_id'> | null
 }
 
-export type DashboardOrdersType = QueryData<
- ReturnType<typeof dashboardOrdersQuery>
->
+export const dashboardOrdersQuery = async (
+ params: DashboardOrdersQueryParams,
+) => {
+ const qs = new URLSearchParams()
+ qs.set('shape', 'dashboard')
+ qs.set('companyId', params.companyId)
+ if (params.locationId) qs.set('locationId', params.locationId)
+ if (params.dateFrom) qs.set('dateFrom', params.dateFrom)
+ if (params.dateTo) qs.set('dateTo', params.dateTo)
 
-export const dashboardOrderItemsQuery = (orderIds: string[]) => {
- const query = supabase.from('order_items').select(
-  `
-   id,
-   order_id,
-   master_product_id,
-   quantity,
-   unit_price,
-   total_price,
-   baseline_unit_price,
-   override_reason,
-   master_products (
-     id,
-     description,
-     article_code,
-     unit_size
-   ),
-   supplier_products (
-     supplier_id,
-     suppliers (
-       id,
-       name
-     )
-   )
-  `,
+ const res = await apiClient.get<DashboardOrderRow[]>(
+  `/orders?${qs.toString()}`,
  )
-
- if (orderIds.length === 0) {
-  return query.eq('id', '00000000-0000-0000-0000-000000000000')
- }
-
- // TODO: .range(0, 4999) raises Supabase's default 1,000-row cap.
- // When order_items approach 5,000 rows, implement a paginated
- // fetchAll() utility that fetches in batches of 1,000.
- return query.in('order_id', orderIds).range(0, 4999)
+ return toQueryResult(res)
 }
 
-export type DashboardOrderItemsType = QueryData<
- ReturnType<typeof dashboardOrderItemsQuery>
->
+export type DashboardOrdersType = DashboardOrderRow[]
 
-export const dashboardSavingsCalculationsQuery = (
+type DashboardOrderItem = Pick<
+ Tables<'order_items'>,
+ | 'id'
+ | 'order_id'
+ | 'master_product_id'
+ | 'quantity'
+ | 'unit_price'
+ | 'total_price'
+ | 'baseline_unit_price'
+ | 'override_reason'
+> & {
+ master_products: Pick<
+  Tables<'master_products'>,
+  'id' | 'description' | 'article_code' | 'unit_size'
+ > | null
+ supplier_products:
+  | (Pick<Tables<'supplier_products'>, 'supplier_id'> & {
+     suppliers: Pick<Tables<'suppliers'>, 'id' | 'name'> | null
+    })
+  | null
+}
+
+export const dashboardOrderItemsQuery = async (orderIds: string[]) => {
+ if (orderIds.length === 0) {
+  return toQueryResult({ success: true, data: [] as DashboardOrderItem[] })
+ }
+ const res = await apiClient.get<DashboardOrderItem[]>(
+  `/orders/items-for-dashboard?orderIds=${encodeURIComponent(orderIds.join(','))}`,
+ )
+ return toQueryResult(res)
+}
+
+export type DashboardOrderItemsType = DashboardOrderItem[]
+
+type SavingsRow = Pick<
+ Tables<'savings_calculations'>,
+ | 'id'
+ | 'company_id'
+ | 'order_item_id'
+ | 'baseline_price'
+ | 'chosen_price'
+ | 'best_external_price'
+ | 'delta_vs_baseline'
+ | 'is_saving'
+ | 'savings_percentage'
+> & {
+ order_items: Pick<Tables<'order_items'>, 'order_id'> | null
+}
+
+export const dashboardSavingsCalculationsQuery = async (
  companyId: string,
  orderIds: string[],
 ) => {
- const query = supabase
-  .from('savings_calculations')
-  .select(
-   `
-     id,
-     company_id,
-     order_item_id,
-     baseline_price,
-     chosen_price,
-     best_external_price,
-     delta_vs_baseline,
-     is_saving,
-     savings_percentage,
-     order_items!inner(order_id)
-    `,
-  )
-  .eq('company_id', companyId)
-
  if (orderIds.length === 0) {
-  return query.eq('id', '00000000-0000-0000-0000-000000000000')
+  return toQueryResult({ success: true, data: [] as SavingsRow[] })
  }
+ const params = new URLSearchParams()
+ params.set('companyId', companyId)
+ params.set('orderIds', orderIds.join(','))
 
- // Filter through the order_items FK relationship so only ~tens of
- // order UUIDs hit the URL instead of thousands of item UUIDs.
- return query.in('order_items.order_id', orderIds).range(0, 4999)
+ const res = await apiClient.get<SavingsRow[]>(
+  `/orders/savings?${params.toString()}`,
+ )
+ return toQueryResult(res)
 }
 
-export type DashboardSavingsCalculationsType = QueryData<
- ReturnType<typeof dashboardSavingsCalculationsQuery>
->
+export type DashboardSavingsCalculationsType = SavingsRow[]
 
-export const dashboardCredentialHealthQuery = (
+type CredentialHealthRow = Pick<
+ Tables<'location_supplier_credentials'>,
+ | 'id'
+ | 'location_id'
+ | 'company_id'
+ | 'supplier_id'
+ | 'last_login_status'
+ | 'last_login_at'
+ | 'last_error_message'
+ | 'is_active'
+> & {
+ locations: Pick<
+  Tables<'locations'>,
+  'id' | 'name' | 'location_number'
+ > | null
+ companies: Pick<Tables<'companies'>, 'id' | 'name'> | null
+ suppliers: Pick<Tables<'suppliers'>, 'id' | 'name'> | null
+}
+
+export const dashboardCredentialHealthQuery = async (
  companyId: string,
  locationId?: string | null,
 ) => {
- let query = supabase
-  .from('location_supplier_credentials')
-  .select(
-   `
-    id,
-    location_id,
-    supplier_id,
-    last_login_status,
-    last_login_at,
-    last_error_message,
-    is_active,
-    locations (
-      id,
-      name,
-      location_number
-    ),
-    suppliers (
-      id,
-      name
-    )
-   `,
-  )
-  .eq('company_id', companyId)
-  .eq('is_active', true)
+ const params = new URLSearchParams()
+ params.set('companyId', companyId)
+ if (locationId) params.set('locationId', locationId)
 
- if (locationId) {
-  query = query.eq('location_id', locationId)
- }
-
- return query.order('updated_at', { ascending: false })
+ const res = await apiClient.get<CredentialHealthRow[]>(
+  `/location-credentials/health?${params.toString()}`,
+ )
+ return toQueryResult(res)
 }
 
-export type DashboardCredentialHealthType = QueryData<
- ReturnType<typeof dashboardCredentialHealthQuery>
->
+export type DashboardCredentialHealthType = CredentialHealthRow[]

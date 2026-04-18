@@ -94,6 +94,9 @@ const statusBadge = (status: CredentialIssueRow['status']) => {
        {{ issue.supplierName }}
       </div>
       <div class="text-xs text-muted-foreground truncate">
+       {{ issue.companyName }}
+      </div>
+      <div class="text-xs text-muted-foreground truncate">
        {{ issue.locationNumber ? `#${issue.locationNumber} · ` : '' }}
        {{ issue.locationName }}
       </div>

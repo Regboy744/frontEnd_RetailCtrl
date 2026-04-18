@@ -1,21 +1,38 @@
-import { supabase } from '@/lib/supabaseClient'
-import type { QueryData } from '@supabase/supabase-js'
+import { apiClient } from '@/lib/apiClient'
+import type { Address } from '@/features/addresses/types'
 
-// Fetch address by company ID (single address per company)
-export const addressByCompanyQuery = (companyId: string) =>
- supabase
-  .from('addresses')
-  .select('*')
-  .eq('company_id', companyId)
-  .is('location_id', null)
-  .maybeSingle()
+interface QueryResult<T> {
+ data: T | null
+ error: Error | null
+ status: number
+}
 
-export type AddressByCompanyType = QueryData<
- ReturnType<typeof addressByCompanyQuery>
->
+const toQueryResult = <T>(res: {
+ success: boolean
+ data?: T
+ error?: { message: string; status: number }
+}): QueryResult<T> => ({
+ data: res.success ? (res.data ?? null) : null,
+ error: res.success ? null : new Error(res.error?.message ?? 'Request failed'),
+ status: res.error?.status ?? (res.success ? 200 : 500),
+})
+
+// Fetch address by company ID (single address per company, location_id IS NULL)
+export const addressByCompanyQuery = async (companyId: string) => {
+ const res = await apiClient.get<Address | null>(
+  `/addresses/company/${encodeURIComponent(companyId)}`,
+ )
+ return toQueryResult(res)
+}
+
+export type AddressByCompanyType = Address
 
 // Fetch single address by ID
-export const addressQuery = (id: string) =>
- supabase.from('addresses').select('*').eq('id', id).single()
+export const addressQuery = async (id: string) => {
+ const res = await apiClient.get<Address>(
+  `/addresses/${encodeURIComponent(id)}`,
+ )
+ return toQueryResult(res)
+}
 
-export type AddressQueryType = QueryData<ReturnType<typeof addressQuery>>
+export type AddressQueryType = Address

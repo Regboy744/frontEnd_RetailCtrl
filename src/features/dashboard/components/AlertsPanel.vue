@@ -124,6 +124,9 @@ const countBadgeClass = (count: number, tone: 'ok' | 'warn'): string => {
        <div class="min-w-0">
         <div class="font-medium truncate">{{ issue.supplierName }}</div>
         <div class="text-xs text-muted-foreground truncate">
+         {{ issue.companyName }}
+        </div>
+        <div class="text-xs text-muted-foreground truncate">
          {{ issue.locationNumber ? `#${issue.locationNumber} · ` : '' }}
          {{ issue.locationName }}
         </div>

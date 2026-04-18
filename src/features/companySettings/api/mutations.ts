@@ -1,35 +1,43 @@
-import { supabase } from '@/lib/supabaseClient'
+import { apiClient } from '@/lib/apiClient'
 import type { ThresholdSettingFormData } from '@/features/companySettings/types'
+import type { Tables } from '@/types/shared/database.types'
+
+type CompanySupplierSetting = Tables<'company_supplier_settings'>
+
+interface MutationResult<T> {
+ success: boolean
+ data?: T
+ error?: Error
+}
+
+const toMutationResult = <T>(res: {
+ success: boolean
+ data?: T
+ error?: { message: string }
+}): MutationResult<T> => ({
+ success: res.success,
+ data: res.data,
+ error: res.error ? new Error(res.error.message) : undefined,
+})
 
 // Upsert all threshold settings for a company (bulk save)
 export const upsertThresholdSettings = async (
  companyId: string,
  settings: ThresholdSettingFormData[],
 ) => {
- try {
-  // Prepare data for upsert - add company_id to each setting
-  const upsertData = settings.map((setting) => ({
+ const res = await apiClient.post<CompanySupplierSetting[]>(
+  '/company-settings/upsert',
+  {
    company_id: companyId,
-   supplier_id: setting.supplier_id,
-   threshold_percentage: setting.threshold_percentage,
-   special_pricing_enabled: setting.special_pricing_enabled,
-   is_active: setting.is_active,
-  }))
-
-  // Use upsert with onConflict to handle both insert and update
-  const { data, error } = await supabase
-   .from('company_supplier_settings')
-   .upsert(upsertData, {
-    onConflict: 'company_id,supplier_id',
-    ignoreDuplicates: false,
-   })
-   .select()
-
-  if (error) throw error
-  return { success: true, data }
- } catch (err) {
-  return { success: false, error: err }
- }
+   settings: settings.map((s) => ({
+    supplier_id: s.supplier_id,
+    threshold_percentage: s.threshold_percentage,
+    special_pricing_enabled: s.special_pricing_enabled,
+    is_active: s.is_active,
+   })),
+  },
+ )
+ return toMutationResult(res)
 }
 
 // Update single threshold setting
@@ -37,21 +45,13 @@ export const updateThresholdSetting = async (
  settingId: string,
  data: Partial<ThresholdSettingFormData>,
 ) => {
- try {
-  const { data: updated, error } = await supabase
-   .from('company_supplier_settings')
-   .update({
-    threshold_percentage: data.threshold_percentage,
-    special_pricing_enabled: data.special_pricing_enabled,
-    is_active: data.is_active,
-   })
-   .eq('id', settingId)
-   .select()
-   .single()
-
-  if (error) throw error
-  return { success: true, data: updated }
- } catch (err) {
-  return { success: false, error: err }
- }
+ const res = await apiClient.patch<CompanySupplierSetting>(
+  `/company-settings/${encodeURIComponent(settingId)}`,
+  {
+   threshold_percentage: data.threshold_percentage,
+   special_pricing_enabled: data.special_pricing_enabled,
+   is_active: data.is_active,
+  },
+ )
+ return toMutationResult(res)
 }

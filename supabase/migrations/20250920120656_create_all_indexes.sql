@@ -77,10 +77,6 @@ CREATE INDEX idx_savings_date ON savings_calculations(calculation_date);
 -- For queries like: "Get all orders for this location in date range" 
 CREATE INDEX idx_orders_location_date ON orders(location_id, order_date);
 
--- 2. Store-based status filtering (HIGH PRIORITY)
--- For queries like: "Get all pending orders for this location"
-CREATE INDEX idx_orders_location_status ON orders(location_id, status);
-
 -- 3. Price comparison queries
 -- For queries like: "Compare prices for same product across suppliers"
 CREATE INDEX idx_supplier_products_product_supplier ON supplier_products(master_product_id, supplier_id);
@@ -102,14 +98,6 @@ CREATE INDEX idx_savings_date_is_saving ON savings_calculations(calculation_date
 -- 1. Active companies (most common queries focus on active companies)
 -- Much smaller index since it excludes inactive companies
 CREATE INDEX idx_companies_active ON companies(id) WHERE is_active = true;
-
--- 2. Pending orders (frequently queried for workflow management)
--- Smaller index for active workflow items
-CREATE INDEX idx_orders_pending ON orders(location_id, order_date) WHERE status = 'pending';
-
--- 3. Delivered orders (for completed order analysis and reporting)
--- Optimized for historical analysis queries
-CREATE INDEX idx_orders_delivered ON orders(location_id, order_date) WHERE status = 'delivered';
 
 -- 4. Active suppliers (for price comparison queries)
 CREATE INDEX idx_suppliers_active_lookup ON suppliers(id, name) WHERE is_active = true;

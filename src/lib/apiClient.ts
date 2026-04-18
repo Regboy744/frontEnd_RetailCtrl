@@ -216,6 +216,118 @@ export async function patch<T>(endpoint: string, body: unknown): Promise<ApiResp
   });
 }
 
+/**
+ * Parsed Server-Sent Event.
+ */
+export interface SseEvent<T = unknown> {
+  event: string;
+  data: T;
+}
+
+/**
+ * POST request that consumes a text/event-stream response.
+ *
+ * Invokes `onEvent` for each SSE message as it arrives. Returns when the
+ * server closes the stream. Abort via the provided signal to cancel mid-flight.
+ */
+export async function postStream(
+  endpoint: string,
+  body: unknown,
+  onEvent: (event: SseEvent) => void,
+  options: { signal?: AbortSignal } = {}
+): Promise<{ success: boolean; error?: ApiError }> {
+  try {
+    const url = `${API_URL}${endpoint}`;
+    const headers = await buildHeaders();
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify(body),
+      signal: options.signal,
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      if (response.status === 401) {
+        await supabase.auth.refreshSession().catch(() => {});
+      }
+      return {
+        success: false,
+        error: {
+          message: text || 'Stream request failed',
+          status: response.status,
+        },
+      };
+    }
+
+    if (!response.body) {
+      return {
+        success: false,
+        error: { message: 'Response has no body', status: 0 },
+      };
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE messages are separated by blank lines
+      let sep: number;
+      while ((sep = buffer.indexOf('\n\n')) !== -1) {
+        const raw = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+
+        let eventName = 'message';
+        const dataLines: string[] = [];
+        for (const line of raw.split('\n')) {
+          if (line.startsWith('event:')) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+        if (dataLines.length === 0) continue;
+
+        let parsed: unknown = dataLines.join('\n');
+        try {
+          parsed = JSON.parse(dataLines.join('\n'));
+        } catch {
+          // Leave as string if not valid JSON
+        }
+
+        onEvent({ event: eventName, data: parsed });
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return {
+        success: false,
+        error: { message: 'Stream cancelled', status: 0 },
+      };
+    }
+    return {
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Stream error',
+        status: 0,
+      },
+    };
+  }
+}
+
 export const apiClient = {
   get,
   post,
@@ -223,4 +335,5 @@ export const apiClient = {
   patch,
   delete: del,
   postFormData,
+  postStream,
 };

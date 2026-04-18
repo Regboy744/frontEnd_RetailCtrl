@@ -16,15 +16,6 @@ export type OrderItemUpdate = TablesUpdate<'order_items'>
 export type Location = Tables<'locations'>
 export type Company = Tables<'companies'>
 
-// Order status constants
-export const ORDER_STATUSES = [
- 'pending',
- 'confirmed',
- 'delivered',
- 'cancelled',
-] as const
-export type OrderStatus = (typeof ORDER_STATUSES)[number]
-
 // Date preset constants
 export const DATE_PRESETS = [
  'today',
@@ -41,7 +32,6 @@ export interface OrderFilters {
  locationId: string | null // null means "All Locations"
  dateFrom: string | null // ISO date string
  dateTo: string | null // ISO date string
- status: string[] // Array of status values
  datePreset?: DatePreset
 }
 
@@ -49,7 +39,6 @@ export interface OrderFilters {
 export interface OrderWithLocation {
  id: string
  order_date: string
- status: string | null
  total_amount: number | null
  notes: string | null
  created_at: string | null
@@ -102,7 +91,6 @@ export interface OrderItemWithProduct {
 export interface OrderDetail {
  id: string
  order_date: string
- status: string | null
  total_amount: number | null
  notes: string | null
  created_at: string | null

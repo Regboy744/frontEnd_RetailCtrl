@@ -1,23 +1,42 @@
-import { supabase } from '@/lib/supabaseClient'
-import type { QueryData } from '@supabase/supabase-js'
+import { apiClient } from '@/lib/apiClient'
+import type { Tables } from '@/types/shared/database.types'
+
+interface QueryResult<T> {
+ data: T | null
+ error: Error | null
+ status: number
+}
+
+const toQueryResult = <T>(res: {
+ success: boolean
+ data?: T
+ error?: { message: string; status: number }
+}): QueryResult<T> => ({
+ data: res.success ? (res.data ?? null) : null,
+ error: res.success ? null : new Error(res.error?.message ?? 'Request failed'),
+ status: res.error?.status ?? (res.success ? 200 : 500),
+})
+
+type SupplierSummary = Pick<Tables<'suppliers'>, 'id' | 'name' | 'is_active'>
 
 // Fetch all active suppliers
-export const allSuppliersQuery = () =>
- supabase
-  .from('suppliers')
-  .select('id, name, is_active')
-  .eq('is_active', true)
-  .order('name', { ascending: true })
+export const allSuppliersQuery = async () => {
+ const res = await apiClient.get<SupplierSummary[]>(
+  '/suppliers?activeOnly=true',
+ )
+ return toQueryResult(res)
+}
 
-export type AllSuppliersType = QueryData<ReturnType<typeof allSuppliersQuery>>
+export type AllSuppliersType = SupplierSummary[]
+
+type CompanySupplierSetting = Tables<'company_supplier_settings'>
 
 // Fetch company supplier settings for a specific company
-export const companySupplierSettingsQuery = (companyId: string) =>
- supabase
-  .from('company_supplier_settings')
-  .select('*')
-  .eq('company_id', companyId)
+export const companySupplierSettingsQuery = async (companyId: string) => {
+ const res = await apiClient.get<CompanySupplierSetting[]>(
+  `/company-settings?companyId=${encodeURIComponent(companyId)}`,
+ )
+ return toQueryResult(res)
+}
 
-export type CompanySupplierSettingsType = QueryData<
- ReturnType<typeof companySupplierSettingsQuery>
->
+export type CompanySupplierSettingsType = CompanySupplierSetting[]

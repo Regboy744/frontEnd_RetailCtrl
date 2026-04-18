@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { FieldError } from '@/components/ui/field'
 import { DateRangePicker } from '@/components/ui/date-picker'
-import { X, Filter, Building2, Calendar, CheckCircle } from 'lucide-vue-next'
+import { X, Filter, Building2, Calendar } from 'lucide-vue-next'
 import type { OrderFilters, LocationOption } from '@/features/orders/types'
 
 interface Props {
@@ -46,14 +46,6 @@ const datePresets = [
  { value: 'month', label: 'This Month' },
  { value: 'lastMonth', label: 'Last Month' },
  { value: 'custom', label: 'Custom Range' },
-]
-
-// Status options with labels
-const statusOptions = [
- { value: 'pending', label: 'Pending', color: 'bg-warning' },
- { value: 'confirmed', label: 'Confirmed', color: 'bg-primary' },
- { value: 'delivered', label: 'Delivered', color: 'bg-success' },
- { value: 'cancelled', label: 'Cancelled', color: 'bg-destructive' },
 ]
 
 // Date validation
@@ -105,8 +97,7 @@ const hasActiveFilters = computed(() => {
  return (
   props.filters.locationId !== null ||
   props.filters.dateFrom !== null ||
-  props.filters.dateTo !== null ||
-  props.filters.status.length > 0
+  props.filters.dateTo !== null
  )
 })
 
@@ -163,19 +154,6 @@ const handleClearDates = () => {
   dateTo: null,
   datePreset: 'custom', // Stay in custom mode
  })
-}
-
-const toggleStatus = (statusValue: string) => {
- const currentStatus = [...props.filters.status]
- const index = currentStatus.indexOf(statusValue)
-
- if (index > -1) {
-  currentStatus.splice(index, 1)
- } else {
-  currentStatus.push(statusValue)
- }
-
- emit('update:filters', { status: currentStatus })
 }
 
 const handleReset = () => {
@@ -318,35 +296,6 @@ const handleReset = () => {
 
      <!-- Error Message -->
      <FieldError v-if="dateError" :errors="[dateError]" class="text-xs" />
-    </div>
-   </div>
-  </div>
-
-  <!-- Status Group -->
-  <div class="space-y-3">
-   <div
-    class="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider"
-   >
-    <CheckCircle class="h-3 w-3" />
-    <span>Status</span>
-   </div>
-
-   <div class="rounded-lg bg-muted/30 p-4">
-    <div class="grid grid-cols-2 gap-2">
-     <Badge
-      v-for="status in statusOptions"
-      :key="status.value"
-      :variant="filters.status.includes(status.value) ? 'default' : 'outline'"
-      :class="[
-       'cursor-pointer transition-all text-xs justify-center py-1.5 w-full rounded-sm',
-       filters.status.includes(status.value)
-        ? status.color + ' text-primary-foreground hover:opacity-90'
-        : 'hover:bg-muted',
-      ]"
-      @click="toggleStatus(status.value)"
-     >
-      {{ status.label }}
-     </Badge>
     </div>
    </div>
   </div>

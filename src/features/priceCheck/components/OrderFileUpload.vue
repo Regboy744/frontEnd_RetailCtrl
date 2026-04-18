@@ -18,8 +18,16 @@ import {
  Building2,
  MapPin,
 } from 'lucide-vue-next'
-import { supabase } from '@/lib/supabaseClient'
+import { apiClient } from '@/lib/apiClient'
 import { useAuthStore } from '@/stores/auth'
+
+interface LocationRow {
+ id: string
+ name: string
+ location_number: number
+ company_id: string
+ company: { id: string; name: string } | null
+}
 
 interface LocationOption {
  id: string
@@ -98,33 +106,22 @@ onMounted(async () => {
     return
    }
 
-   const { data, error } = await supabase
-    .from('locations')
-    .select(
-     `
-      id,
-      name,
-      location_number,
-      company_id,
-      company:companies(id, name)
-     `,
-    )
-    .eq('id', authStore.locationId)
-    .single()
+   const res = await apiClient.get<LocationRow>(
+    `/locations/${encodeURIComponent(authStore.locationId)}?withCompany=true`,
+   )
 
-   if (error) throw error
-   if (!data) {
+   if (!res.success || !res.data) {
     locationError.value = 'Your location could not be found.'
     return
    }
 
-   const companyData = data.company as { id: string; name: string } | null
+   const data = res.data
    const location: LocationOption = {
     id: data.id,
     name: data.name,
     location_number: data.location_number,
     company_id: data.company_id,
-    company_name: companyData?.name || 'Unknown company',
+    company_name: data.company?.name || 'Unknown company',
    }
 
    locations.value = [location]
@@ -138,32 +135,18 @@ onMounted(async () => {
     return
    }
 
-   const { data, error } = await supabase
-    .from('locations')
-    .select(
-     `
-      id,
-      name,
-      location_number,
-      company_id,
-      company:companies(id, name)
-     `,
-    )
-    .eq('company_id', authStore.companyId)
-    .eq('is_active', true)
-    .order('name')
+   const res = await apiClient.get<LocationRow[]>(
+    `/locations?withCompany=true&activeOnly=true&companyId=${encodeURIComponent(authStore.companyId)}`,
+   )
 
-   if (error) throw error
-   const mapped = (data ?? []).map((l) => {
-    const companyData = l.company as { id: string; name: string } | null
-    return {
-     id: l.id,
-     name: l.name,
-     location_number: l.location_number,
-     company_id: l.company_id,
-     company_name: companyData?.name || 'Unknown company',
-    }
-   })
+   if (!res.success) throw new Error(res.error?.message ?? 'Failed to load')
+   const mapped = (res.data ?? []).map((l) => ({
+    id: l.id,
+    name: l.name,
+    location_number: l.location_number,
+    company_id: l.company_id,
+    company_name: l.company?.name || 'Unknown company',
+   }))
 
    locations.value = mapped
    if (mapped.length === 0) {
@@ -178,23 +161,13 @@ onMounted(async () => {
    return
   }
 
-  const { data, error } = await supabase
-   .from('locations')
-   .select(
-    `
-     id,
-     name,
-     location_number,
-     company_id,
-     company:companies(id, name)
-    `,
-   )
-   .eq('is_active', true)
-   .order('name')
+  const res = await apiClient.get<LocationRow[]>(
+   `/locations?withCompany=true&activeOnly=true`,
+  )
 
-  if (error) throw error
+  if (!res.success) throw new Error(res.error?.message ?? 'Failed to load')
 
-  const rows = data ?? []
+  const rows = res.data ?? []
   if (rows.length === 0) {
    locationError.value = 'No active locations available.'
    return
@@ -203,8 +176,7 @@ onMounted(async () => {
   const grouped = new Map<string, LocationOption[]>()
 
   for (const l of rows) {
-   const companyData = l.company as { id: string; name: string } | null
-   const companyName = companyData?.name || 'Unknown company'
+   const companyName = l.company?.name || 'Unknown company'
    const location: LocationOption = {
     id: l.id,
     name: l.name,

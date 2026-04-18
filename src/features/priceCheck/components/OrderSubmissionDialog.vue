@@ -40,8 +40,16 @@ import {
  ShoppingCart,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { supabase } from '@/lib/supabaseClient'
+import { apiClient } from '@/lib/apiClient'
 import { useOrderSubmission } from '../composables/useOrderSubmission'
+
+interface LocationApiRow {
+ id: string
+ name: string
+ location_number: number
+ company_id: string
+ company: { id: string; name: string } | null
+}
 import { usePriceCheck } from '../composables/usePriceCheck'
 import type { LocationOption } from '../types'
 import {
@@ -123,13 +131,12 @@ async function loadLocations() {
   if (role === 'manager') {
    // Manager can only see their own location
    if (authStore.locationId) {
-    const { data } = await supabase
-     .from('locations')
-     .select('id, name, location_number')
-     .eq('id', authStore.locationId)
-     .single()
+    const res = await apiClient.get<LocationApiRow>(
+     `/locations/${encodeURIComponent(authStore.locationId)}`,
+    )
 
-    if (data) {
+    if (res.success && res.data) {
+     const data = res.data
      locations.value = [
       {
        id: data.id,
@@ -144,14 +151,12 @@ async function loadLocations() {
    // Admin can see all locations for their company
    if (!authStore.companyId) return
 
-   const { data } = await supabase
-    .from('locations')
-    .select('id, name, location_number')
-    .eq('company_id', authStore.companyId)
-    .eq('is_active', true)
-    .order('name')
+   const res = await apiClient.get<LocationApiRow[]>(
+    `/locations?activeOnly=true&companyId=${encodeURIComponent(authStore.companyId)}`,
+   )
 
-   if (data) {
+   if (res.success) {
+    const data = res.data ?? []
     locations.value = data.map((l) => ({
      id: l.id,
      name: l.name,
@@ -168,27 +173,17 @@ async function loadLocations() {
    }
   } else if (role === 'master') {
    // Master can see all locations grouped by company
-   const { data } = await supabase
-    .from('locations')
-    .select(
-     `
-          id, 
-          name, 
-          location_number,
-          company_id,
-          company:companies(id, name)
-        `,
-    )
-    .eq('is_active', true)
-    .order('name')
+   const res = await apiClient.get<LocationApiRow[]>(
+    `/locations?withCompany=true&activeOnly=true`,
+   )
+   const data = res.success ? (res.data ?? null) : null
 
    if (data) {
     const grouped = new Map<string, LocationOption[]>()
 
     for (const l of data) {
-     const companyData = l.company as { id: string; name: string } | null
-     const companyName = companyData?.name || 'Unknown'
-     const companyIdVal = companyData?.id || l.company_id
+     const companyName = l.company?.name || 'Unknown'
+     const companyIdVal = l.company?.id || l.company_id
 
      const location: LocationOption = {
       id: l.id,

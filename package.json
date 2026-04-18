@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@internationalized/date": "^3.12.1",
-    "@regboy744/retailctrl-contracts": "^0.1.3",
+    "@regboy744/retailctrl-contracts": "^0.2.0",
     "@supabase/supabase-js": "^2.103.3",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/vue-table": "^8.21.3",
