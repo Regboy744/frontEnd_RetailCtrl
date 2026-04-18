@@ -9,7 +9,7 @@ import OrderSelectionBar from '@/features/priceCheck/components/OrderSelectionBa
 import OrderSubmissionDialog from '@/features/priceCheck/components/OrderSubmissionDialog.vue'
 import OrderResultsDialog from '@/features/priceCheck/components/OrderResultsDialog.vue'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, RotateCcw, FileSpreadsheet } from 'lucide-vue-next'
+import { AlertCircle, RotateCcw } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 const {
@@ -108,46 +108,43 @@ const handleClearResults = () => {
   </div>
 
   <!-- Results Section -->
-  <div v-if="hasResults && summary" class="space-y-6">
-   <!-- Parse Info Banner -->
-   <div
-    v-if="parseResult"
-    class="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 px-3 py-2 rounded-lg"
-   >
-    <FileSpreadsheet class="h-4 w-4" />
-    <span>
-     Parsed <strong>{{ parseResult.valid_rows }}</strong> items
-     <template v-if="parseResult.store_number">
-      from Store #{{ parseResult.store_number }}
-     </template>
-    </span>
-   </div>
-
+  <div v-if="hasResults && summary" class="space-y-3">
    <!-- Summary Section -->
    <PriceCheckSummary
     :summary="summary"
     :suppliers="suppliers"
     :products="products"
+    :parse-result="parseResult"
     :selected-count="selectedProductsCount"
     :total-count="totalProductsCount"
    />
 
-   <!-- Products Not Found (missing from catalog) -->
-   <ProductsNotFound
-    v-if="summary.counts.products_not_found.length > 0"
-    :article-codes="summary.counts.products_not_found"
-   />
-
-   <!-- Unpriced (in catalog but no supplier data) -->
-   <ProductsNotFound
-    v-if="(summary.counts.products_unpriced?.length ?? 0) > 0"
-    :article-codes="summary.counts.products_unpriced ?? []"
-    label="unpriced"
-    description="No supplier in your catalog has pricing data for these products"
-   />
+   <!-- Issues (missing + unpriced), side-by-side on wide screens -->
+   <div
+    v-if="
+     summary.counts.products_not_found.length > 0 ||
+     (summary.counts.products_unpriced?.length ?? 0) > 0
+    "
+    class="grid gap-2 md:grid-cols-2"
+   >
+    <ProductsNotFound
+     v-if="summary.counts.products_not_found.length > 0"
+     :article-codes="summary.counts.products_not_found"
+    />
+    <ProductsNotFound
+     v-if="(summary.counts.products_unpriced?.length ?? 0) > 0"
+     :article-codes="summary.counts.products_unpriced ?? []"
+     label="unpriced"
+     description="No supplier in your catalog has pricing data for these products"
+    />
+   </div>
 
    <!-- Comparison Table -->
-   <PriceComparisonTable :suppliers="suppliers" :products="products" />
+   <PriceComparisonTable
+    :suppliers="suppliers"
+    :products="products"
+    :thresholds="summary.thresholds_applied ?? {}"
+   />
   </div>
 
   <!-- Order Submission Components -->

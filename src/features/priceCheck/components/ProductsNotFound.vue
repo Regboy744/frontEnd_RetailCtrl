@@ -41,24 +41,21 @@ const remainingCount = computed(() => props.articleCodes.length - 8)
    <!-- Header -->
    <CollapsibleTrigger as-child>
     <button
-     class="w-full flex items-center justify-between px-4 py-3 hover:bg-warning/5 transition-colors text-left"
+     class="w-full flex items-center justify-between gap-3 px-3 py-2 hover:bg-warning/5 transition-colors text-left"
     >
-     <div class="flex items-center gap-3">
+     <div class="flex items-center gap-2 min-w-0">
       <AlertTriangle class="h-4 w-4 text-warning shrink-0" />
-      <div>
-       <p class="text-sm font-medium text-warning">
-        {{ articleCodes.length }} product{{
-         articleCodes.length !== 1 ? 's' : ''
-        }}
-        {{ label }}
-       </p>
-       <p class="text-xs text-muted-foreground">
-        {{ description }}
-       </p>
-      </div>
+      <p class="text-sm text-warning truncate">
+       <span class="font-medium">
+        {{ articleCodes.length }} {{ label }}
+       </span>
+       <span class="text-xs text-muted-foreground ml-1">
+        · {{ description }}
+       </span>
+      </p>
      </div>
      <ChevronDown
-      class="h-4 w-4 text-muted-foreground transition-transform duration-200"
+      class="h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200"
       :class="{ 'rotate-180': isExpanded }"
      />
     </button>
@@ -66,7 +63,7 @@ const remainingCount = computed(() => props.articleCodes.length - 8)
 
    <!-- Content -->
    <CollapsibleContent>
-    <div class="px-4 pb-4 pt-1">
+    <div class="px-3 pb-3 pt-0">
      <div class="flex flex-wrap gap-1.5">
       <span
        v-for="code in visibleCodes"
